@@ -1,29 +1,12 @@
+# main.py
 from fastapi import FastAPI
-from pydantic import BaseModel, EmailStr
-from database import users_collection
+from routes import users
 
-# FastAPI app
-app = FastAPI()
+app = FastAPI(title="SEOtron API", version="1.0")
 
-# Pydantic model for validation
-class User(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
+# Include the users router
+app.include_router(users.router, prefix="/users", tags=["Users"])
 
-# Root route
 @app.get("/")
-def home():
-    return {"message": "SEOtron Backend Running "}
-
-# Fetch all users
-@app.get("/users")
-def get_users():
-    users = list(users_collection.find({}, {"_id": 0}))
-    return {"users": users}
-
-# Add a new user
-@app.post("/users")
-def add_user(user: User):
-    users_collection.insert_one(user.dict())
-    return {"message": "User added successfully"}
+async def root():
+    return {"message": "Welcome to SEOtron API!"}
