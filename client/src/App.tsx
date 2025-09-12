@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { About } from "./components/About";
 import { Cta } from "./components/Cta";
@@ -13,14 +14,29 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import { Services } from "./components/Services";
 import { Team } from "./components/Team";
 import { Testimonials } from "./components/Testimonials";
-import { Signup } from "./components/Signup"; 
+import { Signup } from "./components/Signup";
 import { BookDemo } from "./components/DemoPage";
+import { getHello } from "./api";   // 👈 import API function
+
 import "./App.css";
 
 function App() {
+  const [message, setMessage] = useState<string>("");
+
+  useEffect(() => {
+    getHello()
+      .then((data) => setMessage(data.message))
+      .catch((err) => console.error("API error:", err));
+  }, []);
+
   return (
     <>
       <Navbar />
+      {/* ✅ Backend test message */}
+      <p style={{ textAlign: "center", margin: "10px", color: "green" }}>
+        Backend says: {message}
+      </p>
+
       <Routes>
         {/* Home route */}
         <Route
