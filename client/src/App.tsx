@@ -19,6 +19,7 @@ import { Signup } from "./components/Signup";
 import { BookDemo } from "./components/DemoPage";
 import { SEOAnalyzer } from "./components/SEOanalyzer";
 import { Login } from "./components/Login"; // ✅ Import Login page
+import { ProtectedRoute } from "./components/ProtectedRoute"; // ✅ Import ProtectedRoute
 
 import "./App.css";
 
@@ -52,11 +53,20 @@ function App() {
 
         {/* Auth routes */}
         <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} /> {/* ✅ Login route */}
+        <Route path="/login" element={<Login />} />
 
         {/* Other pages */}
         <Route path="/book-demo" element={<BookDemo />} />
-        <Route path="/analyze" element={<SEOAnalyzer />} />
+
+        {/* ✅ Protected SEO Analyzer page */}
+        <Route
+          path="/analyze"
+          element={
+            <ProtectedRoute>
+              <SEOAnalyzer />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </>
   );

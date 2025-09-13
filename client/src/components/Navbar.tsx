@@ -44,6 +44,15 @@ const routeList: RouteProps[] = [
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  // ✅ Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/login"; // redirect to login page
+  };
+
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
+
   return (
     <header className="sticky border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
       <NavigationMenu className="mx-auto">
@@ -63,10 +72,7 @@ export const Navbar = () => {
           <span className="flex md:hidden">
             <ModeToggle />
 
-            <Sheet
-              open={isOpen}
-              onOpenChange={setIsOpen}
-            >
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger className="px-2">
                 <Menu
                   className="flex md:hidden h-5 w-5"
@@ -94,6 +100,28 @@ export const Navbar = () => {
                       {label}
                     </a>
                   ))}
+
+                  {isLoggedIn ? (
+                    <button
+                      onClick={handleLogout}
+                      className={`w-[110px] border ${buttonVariants({
+                        variant: "secondary",
+                      })}`}
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <a
+                      rel="noreferrer noopener"
+                      href="/login"
+                      className={`w-[110px] border ${buttonVariants({
+                        variant: "secondary",
+                      })}`}
+                    >
+                      Sign In
+                    </a>
+                  )}
+
                   <a
                     rel="noreferrer noopener"
                     href="https://github.com/leoMirandaa/shadcn-landing-page.git"
@@ -127,14 +155,22 @@ export const Navbar = () => {
           </nav>
 
           <div className="hidden md:flex gap-2">
-            <a
-              rel="noreferrer noopener"
-              href="https://github.com/leoMirandaa/shadcn-landing-page.git"
-              target="_blank"
-              className={`border ${buttonVariants({ variant: "secondary" })}`}
-            >
-              Sign in
-            </a>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600`}
+              >
+                Logout
+              </button>
+            ) : (
+              <a
+                rel="noreferrer noopener"
+                href="/login"
+                className={`border ${buttonVariants({ variant: "secondary" })}`}
+              >
+                Sign In
+              </a>
+            )}
 
             <ModeToggle />
           </div>
