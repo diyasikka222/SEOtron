@@ -1,17 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signupUser } from "../api"; // ✅ Import API function
+import { loginUser } from "../api"; // ✅ Import API function
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-export const Signup = () => {
+export const Login = () => {
   const navigate = useNavigate();
 
   // -------------------------
   // Form state
   // -------------------------
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,17 +19,16 @@ export const Signup = () => {
   // -------------------------
   // Handle form submission
   // -------------------------
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const res = await signupUser({ username: fullName, email, password });
-      alert(res.message);           // show success message
-      navigate("/login");           // redirect to login page
+      await loginUser({ email, password }); // API call
+      navigate("/analyze");                 // redirect to SEO Analyzer
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Signup failed");
+      setError(err.response?.data?.detail || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -41,28 +39,17 @@ export const Signup = () => {
       <Card className="w-full max-w-md p-6 shadow-xl rounded-2xl bg-black/80 backdrop-blur border border-white/10">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-bold">
-            <span className="bg-gradient-to-r from-[#F596D3] to-[#D247BF] text-transparent bg-clip-text">
-              Create
-            </span>{" "}
-            Your Account
+            Log In to Your Account
           </CardTitle>
           <p className="text-muted-foreground">
-            Join us and take your business to new heights
+            Enter your credentials to continue
           </p>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {error && <p className="text-red-500 text-sm">{error}</p>}
 
-          <form onSubmit={handleSignup} className="space-y-4">
-            <Input
-              type="text"
-              placeholder="Full Name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="bg-black/40 border-white/20 text-white placeholder:text-gray-400"
-              required
-            />
+          <form onSubmit={handleLogin} className="space-y-4">
             <Input
               type="email"
               placeholder="Email"
@@ -85,14 +72,14 @@ export const Signup = () => {
               className="w-full bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
               disabled={loading}
             >
-              {loading ? "Signing Up..." : "Sign Up"}
+              {loading ? "Logging In..." : "Log In"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <a href="/login" className="text-[#61DAFB] hover:underline">
-              Log in
+            Don’t have an account?{" "}
+            <a href="/signup" className="text-[#61DAFB] hover:underline">
+              Sign Up
             </a>
           </p>
         </CardContent>

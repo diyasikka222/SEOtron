@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class User(BaseModel):
-    id: int
-    name: str
-    email: str
+    username: str
+    email: EmailStr
+    password: str
+    full_name: str | None = None
