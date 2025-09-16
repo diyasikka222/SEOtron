@@ -28,7 +28,7 @@ export const Signup = () => {
     try {
       const res = await signupUser({ username: fullName, email, password });
       alert(res.message);           // show success message
-      navigate("/login");           // redirect to login page
+      navigate("/analyze");           // redirect to login page
     } catch (err: any) {
       setError(err.response?.data?.detail || "Signup failed");
     } finally {
