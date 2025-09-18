@@ -1,6 +1,6 @@
 from fastapi import APIRouter
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
-from typing import List, Dict
 from services.seo_service import analyze_keyword, analyze_url  # your service functions
 
 router = APIRouter(
@@ -38,10 +38,10 @@ class AnalyzeRequest(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     title: str
-    metaTags: Dict[str, str]
-    score: int
-    keywords: List[str]
-    links: List[str]
+    metaTags: Dict[str, Any] = {}
+    score: Optional[int] = None
+    keywords: Optional[List[str]] = []
+    links: List[str] = []
 
 # -------------------------
 # URL SEO Analysis Endpoint
@@ -53,3 +53,4 @@ async def analyze_website(request: AnalyzeRequest):
     title, meta tags, score, keywords, links.
     """
     return analyze_url(request.url)
+
