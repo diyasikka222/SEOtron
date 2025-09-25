@@ -1,3 +1,11 @@
-fastapi>=0.100.0
-uvicorn[standard]>=0.23.0
-# Add any other dependencies used in your routes (e.g., databases, pydantic, etc.)
+fastapi
+uvicorn[standard]
+pydantic[email]
+pymongo
+motor
+passlib[bcrypt]
+python-jose[cryptography]
+requests
+beautifulsoup4
+python-dotenv
+
