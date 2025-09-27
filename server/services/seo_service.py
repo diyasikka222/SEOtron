@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_PAGESPEED_API_KEY")
 
-# -------------------- Keyword Analysis (still dummy) --------------------
+# -------------------- Keyword Analysis (dummy for now) --------------------
 def analyze_keyword(keyword: str):
     """
     Dummy keyword analysis (placeholder).
@@ -66,7 +66,7 @@ def analyze_url(url: str):
         # --- Metadata ---
         title = soup.title.string.strip() if soup.title else "No Title"
         description_tag = soup.find("meta", attrs={"name": "description"})
-        description = description_tag["content"].strip() if description_tag and description_tag.get("content") else ""
+        description = description_tag["content"].strip() if description_tag and description_tag.get("content") else None
 
         keywords = []
         meta_kw = soup.find("meta", attrs={"name": "keywords"})
@@ -109,10 +109,14 @@ def analyze_url(url: str):
 
         # --- Robots ---
         robots_meta = soup.find("meta", attrs={"name": "robots"})
-        robots_content = robots_meta["content"].lower() if robots_meta and robots_meta.get("content") else ""
+        robots_content = robots_meta["content"].lower() if robots_meta and robots_meta.get("content") else None
 
         # --- Open Graph ---
-        og_tags = {tag.get("property"): tag.get("content") for tag in soup.find_all("meta") if tag.get("property", "").startswith("og:")}
+        og_tags = {
+            tag.get("property"): tag.get("content")
+            for tag in soup.find_all("meta")
+            if tag.get("property", "").startswith("og:")
+        }
 
         # --- Structured data ---
         structured_data = [script.get_text() for script in soup.find_all("script", attrs={"type": "application/ld+json"})]
@@ -130,14 +134,15 @@ def analyze_url(url: str):
         # --- Real Google PSI Scores ---
         google_scores = get_pagespeed_insights(url, "desktop")
 
+        # --- Return fully valid ResponseModel dict ---
         return {
             "title": title,
             "metaTags": {
                 "description": description,
-                "keywords": ",".join(keywords),
+                "keywords": ",".join(keywords) if keywords else None,
                 "robots": robots_content,
                 "canonical": canonical,
-                "og_tags": og_tags,
+                "og_tags": og_tags if og_tags else None,
             },
             "headings": {
                 "h1": h1_tags,
@@ -156,18 +161,24 @@ def analyze_url(url: str):
             },
             "performance": performance_data,
             "structured_data": structured_data,
-            "google_scores": google_scores  # ✅ Real SEO & Performance scores
+            "google_scores": google_scores,
+            "score": None,
+            "keywords": keywords or [],
         }
 
     except Exception as e:
+        # Always return the correct structure, even on error
         return {
             "title": "Error fetching URL",
-            "metaTags": {},
-            "headings": {},
-            "content": {},
-            "links": {},
-            "performance": {},
+            "metaTags": None,
+            "headings": None,
+            "content": None,
+            "links": {"internal": [], "external": [], "broken": []},
+            "performance": None,
             "structured_data": [],
-            "google_scores": {},
+            "google_scores": None,
+            "score": 0,
+            "keywords": [],
             "error": str(e),
         }
+
