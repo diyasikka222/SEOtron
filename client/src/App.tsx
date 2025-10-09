@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import { About } from "./components/About";
 import { Cta } from "./components/Cta";
@@ -18,58 +18,76 @@ import { Testimonials } from "./components/Testimonials";
 import { Signup } from "./components/Signup";
 import { BookDemo } from "./components/DemoPage";
 import { SEOAnalyzer } from "./components/SEOanalyzer";
-import { Login } from "./components/Login"; // ✅ Import Login page
-import { ProtectedRoute } from "./components/ProtectedRoute"; // ✅ Import ProtectedRoute
+import { Login } from "./components/Login";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 import "./App.css";
 
+// ✅ PublicRoute component
+interface Props {
+    children: React.ReactNode;
+}
+
+export const PublicRoute: React.FC<Props> = ({ children }) => {
+    const storedUser = localStorage.getItem("user");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    if (user) {
+        return <Navigate to="/analyze" />;
+    }
+    return <>{children}</>;
+};
+
+
 function App() {
-  return (
-    <>
-      <Navbar />
+    return (
+        <>
+            <Navbar />
 
-      <Routes>
-        {/* Home route */}
-        <Route
-          path="/"
-          element={
-            <>
-              <Hero />
-              <About />
-              <HowItWorks />
-              <Features />
-              <Services />
-              <Cta />
-              <Testimonials />
-              <Team />
-              <Pricing />
-              <Newsletter />
-              <FAQ />
-              <Footer />
-              <ScrollToTop />
-            </>
-          }
-        />
+            <Routes>
+                {/* Landing Page - PublicRoute wraps it */}
+                <Route
+                    path="/"
+                    element={
+                        <PublicRoute>
+                            <>
+                                <Hero />
+                                <About />
+                                <HowItWorks />
+                                <Features />
+                                <Services />
+                                <Cta />
+                                <Testimonials />
+                                <Team />
+                                <Pricing />
+                                <Newsletter />
+                                <FAQ />
+                                <Footer />
+                                <ScrollToTop />
+                            </>
+                        </PublicRoute>
+                    }
+                />
 
-        {/* Auth routes */}
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
+                {/* Auth Routes */}
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/login" element={<Login />} />
 
-        {/* Other pages */}
-        <Route path="/book-demo" element={<BookDemo />} />
+                {/* Other Public Pages */}
+                <Route path="/book-demo" element={<BookDemo />} />
 
-        {/* ✅ Protected SEO Analyzer page */}
-        <Route
-          path="/analyze"
-          element={
-            <ProtectedRoute>
-              <SEOAnalyzer />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </>
-  );
+                {/* Protected Page */}
+                <Route
+                    path="/analyze"
+                    element={
+                        <ProtectedRoute>
+                            <SEOAnalyzer />
+                        </ProtectedRoute>
+                    }
+                />
+            </Routes>
+        </>
+    );
 }
 
 export default App;

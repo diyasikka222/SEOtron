@@ -38,7 +38,7 @@ export const Hero = () => {
           </Link>
           <Link to="/book-demo">
             <Button
-              className="w-full md:w-1/3 border border-white text-white hover:bg-white hover:text-black"
+              className="w-full md:w-1/3 border border-green-500 text-green-500 hover:bg-purple-300 hover:text-black"
               variant="outline"
             >
               Book a Free Demo

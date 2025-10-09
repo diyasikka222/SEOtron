@@ -44,6 +44,7 @@ export const SEOAnalyzer = () => {
             border: "1px solid #ccc",
             fontSize: "16px",
             outline: "none",
+            color: "black"
           }}
         />
         <button
