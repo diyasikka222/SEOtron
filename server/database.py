@@ -1,31 +1,22 @@
 from pymongo import MongoClient
+from datetime import datetime
 
-# Replace with your MongoDB URI if using Atlas
-MONGO_URI = "mongodb://localhost:27017/"
-
-# Create a client connection
-client = MongoClient(MONGO_URI)
-
-# Choose database
+client = MongoClient("mongodb://localhost:27017")
 db = client["seotron_db"]
 
-# (Optional) Choose collections directly
+# Collections
 users_collection = db["users"]
-seo_reports_collection = db["seo_reports"]
+seo_collection = db["seo_reports"]
 
-
-
-# -------------------------
-# SEO Helpers
-# -------------------------
-def save_seo_report(user_id: str, url: str, result: dict):
+def save_seo_report(user_id, url, data):
     report = {
         "user_id": user_id,
-        "url": url,
-        "result": result,
+        "url": str(url),
+        "data": data,
         "created_at": datetime.utcnow()
     }
     return seo_collection.insert_one(report)
 
-def get_user_reports(user_id: str):
+def get_user_reports(user_id):
     return list(seo_collection.find({"user_id": user_id}))
+

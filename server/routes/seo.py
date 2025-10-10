@@ -108,7 +108,7 @@ async def keyword_analysis(request: KeywordRequest):
 # -------------------------
 @router.get("/dashboard/progress")
 async def get_progress(current_user: User = Depends(get_current_user)):
-    analyses = get_user_reports(current_user.id)
+    analyses = get_user_reports(current_user["_id"], request.url, result.dict())
     total_audits = len(analyses)
 
     if total_audits == 0:
@@ -171,9 +171,8 @@ class AnalyzeResponse(BaseModel):
 # URL SEO Analysis Endpoint
 # -------------------------
 @router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_website(request: AnalyzeRequest, current_user: User = Depends(get_current_user)):
+async def analyze_website(request: AnalyzeRequest, current_user: dict = Depends(get_current_user)):
     result = await analyze_url(request.url)
-
-    # Save to database
-    save_seo_report(current_user.id, request.url, result.dict())
+    save_seo_report(current_user["_id"], request.url, result)
     return result
+

@@ -2,80 +2,108 @@
 import axios from "axios";
 
 // 🔹 Backend base URL
-const API_BASE = "http://127.0.0.1:8000"; // Change if backend is on a different port
+const API_BASE = "http://127.0.0.1:8000";
 
 // -------------------------
 // Helper: Get Auth Header
 // -------------------------
 const getAuthHeader = () => {
-  const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
+    const token = localStorage.getItem("token");
+    return { Authorization: `Bearer ${token}` };
+};
+
+// -------------------------
+// Helper: Handle API errors
+// -------------------------
+const handleApiError = (error: any) => {
+    if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+            alert("Your session has expired. Please log in again.");
+            localStorage.removeItem("token"); // Optional: clear expired token
+            window.location.href = "/login";  // Redirect to login page
+        }
+    }
+    console.error("API Error:", error);
+    throw error;
 };
 
 // -------------------------
 // User APIs
 // -------------------------
 
-// Signup
 export const signupUser = async (data: { username: string; email: string; password: string }) => {
-  const res = await axios.post(`${API_BASE}/users/signup`, data);
-  return res.data;
+    try {
+        const res = await axios.post(`${API_BASE}/users/signup`, data);
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-// Login
 export const loginUser = async (data: { email: string; password: string }) => {
-  const res = await axios.post(`${API_BASE}/users/login`, data);
-  // Save token in localStorage
-  localStorage.setItem("token", res.data.access_token);
-  return res.data;
+    try {
+        const res = await axios.post(`${API_BASE}/users/login`, data);
+        localStorage.setItem("token", res.data.access_token);
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-// Get current logged-in user
 export const getCurrentUser = async () => {
-  const res = await axios.get(`${API_BASE}/users/me`, { headers: getAuthHeader() });
-  return res.data;
+    try {
+        const res = await axios.get(`${API_BASE}/users/me`, { headers: getAuthHeader() });
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-// Get all users (admin or protected)
 export const getAllUsers = async () => {
-  const res = await axios.get(`${API_BASE}/users/all`, { headers: getAuthHeader() });
-  return res.data;
+    try {
+        const res = await axios.get(`${API_BASE}/users/all`, { headers: getAuthHeader() });
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-// Update user
 export const updateUser = async (id: string, data: any) => {
-  const res = await axios.put(`${API_BASE}/users/${id}`, data, { headers: getAuthHeader() });
-  return res.data;
+    try {
+        const res = await axios.put(`${API_BASE}/users/${id}`, data, { headers: getAuthHeader() });
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-// Delete user
 export const deleteUser = async (id: string) => {
-  const res = await axios.delete(`${API_BASE}/users/${id}`, { headers: getAuthHeader() });
-  return res.data;
+    try {
+        const res = await axios.delete(`${API_BASE}/users/${id}`, { headers: getAuthHeader() });
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
 // -------------------------
 // SEO APIs
 // -------------------------
 
-// Analyze website URL
 export const analyzeURL = async (url: string) => {
-  try {
-    const res = await axios.post(`${API_BASE}/api/analyze`, { url });
-    return res.data;
-  } catch (error) {
-    console.error("Error in analyzeURL:", error);
-    throw error;
-  }
+    try {
+        const res = await axios.post(`${API_BASE}/api/analyze`, { url }, { headers: getAuthHeader() });
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-// Analyze keyword
 export const analyzeKeyword = async (keyword: string) => {
-  try {
-    const res = await axios.post(`${API_BASE}/api/keyword`, { keyword });
-    return res.data;
-  } catch (error) {
-    console.error("Error in analyzeKeyword:", error);
-    throw error;
-  }
+    try {
+        const res = await axios.post(`${API_BASE}/api/keyword`, { keyword }, { headers: getAuthHeader() });
+        return res.data;
+    } catch (error) {
+        handleApiError(error);
+    }
 };
