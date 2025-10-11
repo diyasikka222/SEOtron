@@ -1,4 +1,3 @@
-// client/src/api.ts
 import axios from "axios";
 
 // 🔹 Backend base URL
@@ -13,14 +12,14 @@ const getAuthHeader = () => {
 };
 
 // -------------------------
-// Helper: Handle API errors
+// Handle API errors
 // -------------------------
 const handleApiError = (error: any) => {
     if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
             alert("Your session has expired. Please log in again.");
-            localStorage.removeItem("token"); // Optional: clear expired token
-            window.location.href = "/login";  // Redirect to login page
+            localStorage.removeItem("token");
+            window.location.href = "/login";
         }
     }
     console.error("API Error:", error);
@@ -30,7 +29,6 @@ const handleApiError = (error: any) => {
 // -------------------------
 // User APIs
 // -------------------------
-
 export const signupUser = async (data: { username: string; email: string; password: string }) => {
     try {
         const res = await axios.post(`${API_BASE}/users/signup`, data);
@@ -59,27 +57,12 @@ export const getCurrentUser = async () => {
     }
 };
 
-export const getAllUsers = async () => {
+// -------------------------
+// Analytics APIs
+// -------------------------
+export const getAnalytics = async () => {
     try {
-        const res = await axios.get(`${API_BASE}/users/all`, { headers: getAuthHeader() });
-        return res.data;
-    } catch (error) {
-        handleApiError(error);
-    }
-};
-
-export const updateUser = async (id: string, data: any) => {
-    try {
-        const res = await axios.put(`${API_BASE}/users/${id}`, data, { headers: getAuthHeader() });
-        return res.data;
-    } catch (error) {
-        handleApiError(error);
-    }
-};
-
-export const deleteUser = async (id: string) => {
-    try {
-        const res = await axios.delete(`${API_BASE}/users/${id}`, { headers: getAuthHeader() });
+        const res = await axios.get(`${API_BASE}/api/analytics`);
         return res.data;
     } catch (error) {
         handleApiError(error);
@@ -87,9 +70,33 @@ export const deleteUser = async (id: string) => {
 };
 
 // -------------------------
+// SSE subscription
+// -------------------------
+export const subscribeToEvents = (
+    onMessage: (data: any) => void,
+    onError?: (err: any) => void
+) => {
+    const es = new EventSource(`${API_BASE}/api/events`);
+
+    es.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            onMessage(data);
+        } catch (err) {
+            console.error("Invalid SSE data", err);
+        }
+    };
+
+    es.onerror = (err) => {
+        console.warn("SSE connection error", err);
+        if (onError) onError(err);
+        es.close();
+    };
+
+    return es; // return so the component can close it on unmount
+};
+
 // SEO APIs
-// -------------------------
-
 export const analyzeURL = async (url: string) => {
     try {
         const res = await axios.post(`${API_BASE}/api/analyze`, { url }, { headers: getAuthHeader() });

@@ -20,6 +20,7 @@ import { BookDemo } from "./components/DemoPage";
 import { SEOAnalyzer } from "./components/SEOanalyzer";
 import { Login } from "./components/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import Dashboard from "./components/Dashboard";
 
 import "./App.css";
 
@@ -85,7 +86,16 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
+                />
             </Routes>
+
         </>
     );
 }
