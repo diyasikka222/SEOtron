@@ -20,9 +20,11 @@ import { BookDemo } from "./components/DemoPage";
 import { SEOAnalyzer } from "./components/SEOanalyzer";
 import { Login } from "./components/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import Dashboard from "./components/Dashboard";
+
+import Onboarding from "./components/Onboarding"; // ✅ NEW IMPORT
 
 import "./App.css";
+import DashboardDeep from "./components/Dashboard";
 
 // ✅ PublicRoute component
 interface Props {
@@ -38,7 +40,6 @@ export const PublicRoute: React.FC<Props> = ({ children }) => {
     }
     return <>{children}</>;
 };
-
 
 function App() {
     return (
@@ -70,6 +71,9 @@ function App() {
                     }
                 />
 
+                {/* ✅ Onboarding Route (Public) */}
+                <Route path="/onboarding" element={<Onboarding />} />
+
                 {/* Auth Routes */}
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/login" element={<Login />} />
@@ -77,7 +81,7 @@ function App() {
                 {/* Other Public Pages */}
                 <Route path="/book-demo" element={<BookDemo />} />
 
-                {/* Protected Page */}
+                {/* ✅ Protected Pages */}
                 <Route
                     path="/analyze"
                     element={
@@ -87,15 +91,14 @@ function App() {
                     }
                 />
                 <Route
-                    path="/dashboard"
+                    path="/deepdashboard"
                     element={
                         <ProtectedRoute>
-                            <Dashboard />
+                            <DashboardDeep />
                         </ProtectedRoute>
                     }
                 />
             </Routes>
-
         </>
     );
 }
