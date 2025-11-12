@@ -38,8 +38,10 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "face-api.js": "^0.22.2",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.424.0",
+    "postprocessing": "^6.38.0",
     "react": "^18.3.1",
     "react-day-picker": "^9.9.0",
     "react-dom": "^18.3.1",
@@ -47,7 +49,8 @@
     "react-spinners": "^0.17.0",
     "recharts": "^3.2.1",
     "tailwind-merge": "^2.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "three": "^0.181.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",

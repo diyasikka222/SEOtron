@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import { About } from "./components/About";
 import { Cta } from "./components/Cta";
@@ -28,79 +28,85 @@ import DashboardDeep from "./components/Dashboard";
 
 // ✅ PublicRoute component
 interface Props {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export const PublicRoute: React.FC<Props> = ({ children }) => {
-    const storedUser = localStorage.getItem("user");
-    const user = storedUser ? JSON.parse(storedUser) : null;
+  const storedUser = localStorage.getItem("user");
+  const user = storedUser ? JSON.parse(storedUser) : null;
 
-    if (user) {
-        return <Navigate to="/analyze" />;
-    }
-    return <>{children}</>;
+  if (user) {
+    return <Navigate to="/analyze" />;
+  }
+  return <>{children}</>;
 };
 
 function App() {
-    return (
-        <>
-            <Navbar />
+  // useLocation must run inside a Router — this assumes BrowserRouter is mounted above App (index.tsx)
+  const { pathname } = useLocation();
 
-            <Routes>
-                {/* Landing Page - PublicRoute wraps it */}
-                <Route
-                    path="/"
-                    element={
-                        <PublicRoute>
-                            <>
-                                <Hero />
-                                <About />
-                                <HowItWorks />
-                                <Features />
-                                <Services />
-                                <Cta />
-                                <Testimonials />
-                                <Team />
-                                <Pricing />
-                                <Newsletter />
-                                <FAQ />
-                                <Footer />
-                                <ScrollToTop />
-                            </>
-                        </PublicRoute>
-                    }
-                />
+  // Show Navbar only on the landing page "/" (the fragment with Hero, About, etc.)
+  const showNavbar = pathname === "/";
 
-                {/* ✅ Onboarding Route (Public) */}
-                <Route path="/onboarding" element={<Onboarding />} />
+  return (
+    <>
+      {showNavbar && <Navbar />}
 
-                {/* Auth Routes */}
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/login" element={<Login />} />
+      <Routes>
+        {/* Landing Page - PublicRoute wraps it */}
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <>
+                <Hero />
+                <About />
+                <HowItWorks />
+                <Features />
+                <Services />
+                <Cta />
+                <Testimonials />
+                <Team />
+                <Pricing />
+                <Newsletter />
+                <FAQ />
+                <Footer />
+                <ScrollToTop />
+              </>
+            </PublicRoute>
+          }
+        />
 
-                {/* Other Public Pages */}
-                <Route path="/book-demo" element={<BookDemo />} />
+        {/* ✅ Onboarding Route (Public) */}
+        <Route path="/onboarding" element={<Onboarding />} />
 
-                {/* ✅ Protected Pages */}
-                <Route
-                    path="/analyze"
-                    element={
-                        <ProtectedRoute>
-                            <SEOAnalyzer />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/deepdashboard"
-                    element={
-                        <ProtectedRoute>
-                            <DashboardDeep />
-                        </ProtectedRoute>
-                    }
-                />
-            </Routes>
-        </>
-    );
+        {/* Auth Routes */}
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+
+        {/* Other Public Pages */}
+        <Route path="/book-demo" element={<BookDemo />} />
+
+        {/* ✅ Protected Pages */}
+        <Route
+          path="/analyze"
+          element={
+            <ProtectedRoute>
+              <SEOAnalyzer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deepdashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardDeep />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
+  );
 }
 
 export default App;

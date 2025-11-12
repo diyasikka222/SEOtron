@@ -13,7 +13,7 @@
 //   );
 // };
 // HeroCards.tsx
-import myVideo from "../assets/SEOtron_final_motiongraphics.mp4";
+import myVideo from "../assets/SEOtron_infoGraphics.mp4";
 
 export const HeroCards = () => {
   return (
