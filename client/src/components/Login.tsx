@@ -26,10 +26,29 @@ export const Login = () => {
     setError("");
 
     try {
-      await loginUser({ email, password }); // API call
-      navigate("/analyze"); // redirect to SEO Analyzer
+      // 1. Capture the full response from the API
+      //    (Your api.ts file already saves the token to localStorage)
+      const response = await loginUser({ email, password });
+
+      // ✨ 2. FIX: Check for 'access_token' (which your api.ts returns)
+      if (response && response.access_token) {
+        // Token is already saved by your api.ts, so we just check for it.
+      } else {
+        // If no token, we can't proceed.
+        throw new Error("Login did not return an access token.");
+      }
+
+      // ✨ 3. Conditionally navigate based on onboarding status
+      if (response.isOnboarded) {
+        // User is already onboarded
+        navigate("/deepdashboard");
+      } else {
+        // New or user who hasn't finished, send to onboarding
+        navigate("/onboarding");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Login failed");
+      // Handle API errors or the "no token" error from above
+      setError(err.response?.data?.detail || err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -70,7 +89,6 @@ export const Login = () => {
               </Button>
             </Link>
 
-            {/* ✨ MODIFIED: Added pt-10 */}
             <CardTitle className="text-3xl font-bold pt-10">
               Log In to Your Account
             </CardTitle>
@@ -111,9 +129,10 @@ export const Login = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Don’t have an account?{" "}
-              <a href="/signup" className="text-[#61DAFB] hover:underline">
+              {/* Changed to <Link> for better SPA navigation */}
+              <Link to="/signup" className="text-[#61DAFB] hover:underline">
                 Sign Up
-              </a>
+              </Link>
             </p>
           </CardContent>
         </Card>

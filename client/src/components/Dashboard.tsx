@@ -18,6 +18,7 @@ import {
   Share2,
   Zap,
   Check,
+  User, // ✨ 1. Imported User icon
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -1387,6 +1388,16 @@ export default function DashboardDeep() {
             >
               Upgrade
             </button>
+
+            {/* ✨ 2. ADDED Profile Button */}
+            <button
+              onClick={() => navigate("/profile")}
+              style={ghostBtn}
+              title="Profile"
+            >
+              <User size={16} />
+            </button>
+
             <button onClick={logout} style={ghostBtn}>
               Logout
             </button>

@@ -1,9 +1,14 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom"; // Import Link
-import { signupUser } from "../api"; // ✅ Import API function
+import { useNavigate, Link } from "react-router-dom";
+// ✨ 1. Import loginUser in addition to signupUser
+// ✨ FIX: Path changed to ../api (assuming api.ts is in src/)
+import { signupUser, loginUser } from "../api";
+
+// ✨ FIX: Path changed to ./ui/ (assuming ui folder is inside components/)
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+// ✨ FIX: Path changed to ./ (assuming DotGrid is inside components/)
 import DotGrid from "./DotGrid";
 
 export const Signup = () => {
@@ -27,11 +32,28 @@ export const Signup = () => {
     setError("");
 
     try {
-      const res = await signupUser({ username: fullName, email, password });
-      alert(res.message); // show success message
-      navigate("/analyze"); // redirect to login page
+      // 2. First, create the user
+      await signupUser({ username: fullName, email, password });
+
+      // 3. If signup is successful, immediately log the user in
+      const loginResponse = await loginUser({ email, password });
+
+      // 4. Check for token and onboarding status from the login response
+      // (Your api.ts already saves the token in localStorage)
+      if (loginResponse && loginResponse.access_token) {
+        if (loginResponse.isOnboarded) {
+          // User is already onboarded
+          navigate("/deepdashboard");
+        } else {
+          // New user, send to onboarding
+          navigate("/onboarding");
+        }
+      } else {
+        // This shouldn't happen if login is successful, but as a fallback
+        throw new Error("Signup succeeded, but auto-login failed.");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Signup failed");
+      setError(err.response?.data?.detail || err.message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -68,7 +90,6 @@ export const Signup = () => {
             </Button>
           </Link>
 
-          {/* ✨ MODIFIED: Added pt-10 */}
           <CardTitle className="text-3xl font-bold pt-10">
             <span className="bg-gradient-to-r from-[#F596D3] to-[#D247BF] text-transparent bg-clip-text">
               Create
@@ -114,15 +135,15 @@ export const Signup = () => {
               className="w-full bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
               disabled={loading}
             >
-              {loading ? "Signing Up..." : "Sign Up"}
+              {loading ? "Creating Account..." : "Sign Up"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <a href="/login" className="text-[#61DAFB] hover:underline">
+            <Link to="/login" className="text-[#61DAFB] hover:underline">
               Log in
-            </a>
+            </Link>
           </p>
         </CardContent>
       </Card>

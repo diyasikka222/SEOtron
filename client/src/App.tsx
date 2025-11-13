@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+// ✨ FIX: All component paths assumed to be in './components/'
 import { About } from "./components/About";
 import { Cta } from "./components/Cta";
 import { FAQ } from "./components/FAQ";
@@ -16,26 +17,25 @@ import { Services } from "./components/Services";
 import { Team } from "./components/Team";
 import { Testimonials } from "./components/Testimonials";
 import { Signup } from "./components/Signup";
-import { BookDemo } from "./components/DemoPage";
-import { SEOAnalyzer } from "./components/SEOanalyzer";
+import { BookDemo } from "./components/DemoPage"; // Using the name from your original import
+import { SEOAnalyzer } from "./components/SEOanalyzer"; // Using the name from your original import
 import { Login } from "./components/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-
 import Onboarding from "./components/Onboarding";
-
-import "./App.css";
 import DashboardDeep from "./components/Dashboard";
+import { Profile } from "./components/Profile"; // ✨ 1. Import Profile
+
+// ✨ FIX: CSS path assumed to be in './' (src/App.css)
+import "./App.css";
 
 interface Props {
   children: React.ReactNode;
 }
 
 export const PublicRoute: React.FC<Props> = ({ children }) => {
-  // ✨ FIX: Check for "token" instead of "user"
   const token = localStorage.getItem("token");
 
   if (token) {
-    // This will now correctly redirect if a token exists
     return <Navigate to="/deepdashboard" />;
   }
   return <>{children}</>;
@@ -98,6 +98,16 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardDeep />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✨ 2. ADDED Profile Route (Protected) */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />
