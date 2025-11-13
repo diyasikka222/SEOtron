@@ -20,9 +20,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # --- Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ✨ CRITICAL FIX 1: Set auto_error=False to prevent immediate 401 on missing token
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/users/login"
-)  # Matches your login route
+    tokenUrl="/users/login",
+    auto_error=False,  # Don't automatically raise HTTP 401
+)
 
 
 class TokenData(BaseModel):
@@ -62,8 +64,7 @@ def authenticate_user(email: str, password: str) -> Optional[dict]:
     if not user:
         return None
 
-    # ✨ FIX: Use .get() to safely check for 'hashed_password'.
-    # If it's missing (due to bad/old database data), authentication fails gracefully (returns None).
+    # Safely check for 'hashed_password' to prevent KeyError
     hashed_password = user.get("hashed_password")
 
     if not hashed_password or not verify_password(password, hashed_password):
@@ -72,30 +73,36 @@ def authenticate_user(email: str, password: str) -> Optional[dict]:
     return user
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+# ✨ CRITICAL FIX 2: Change return type and logic for public access
+async def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+) -> Optional[dict]:
     """
-    Dependency to get the current user from a token.
-    This is used in all your protected endpoints.
+    Dependency to get the current user. Returns a User dict if authenticated,
+    or None if the token is missing/invalid (for public access).
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    if token is None:
+        # No token provided, user is anonymous. This is allowed for public routes.
+        return None
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         # 'sub' (subject) of the token is the user's email
         email: str = payload.get("sub")
+
         if email is None:
-            raise credentials_exception
+            # Malformed payload
+            return None
 
         # Uses the imported function
         user = get_user_by_email(email)
         if user is None:
-            raise credentials_exception
+            # User deleted since token creation
+            return None
 
-        # user["_id"] is already a string from get_user_by_email
+        # If successful, return the user dictionary
         return user
 
     except JWTError:
-        raise credentials_exception
+        # Token is expired or invalid signature
+        return None

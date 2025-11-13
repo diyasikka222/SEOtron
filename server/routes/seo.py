@@ -2,19 +2,18 @@ from typing import Any, Dict, List, Optional
 
 from database import get_user_reports, save_seo_report
 from fastapi import APIRouter, Depends
+from models.user import User  # Assuming User is imported from models.user
+from pydantic import BaseModel, Field
 
-# ✨ FIX: Cleaned up unused and potentially crashing imports
-# from models.seo import ResponseModel
-from models.user import User
-from pydantic import BaseModel
-from services.seo_service import analyze_keyword, analyze_url
+# ✨ NEW IMPORT: Import the new AI service function
+from services.seo_service import analyze_keyword, analyze_url, ask_ai_for_report
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["SEO"])
 
 
 # -------------------------
-# Keyword Models
+# Keyword Models (Unchanged)
 # -------------------------
 class KeywordRequest(BaseModel):
     keyword: str
@@ -33,18 +32,16 @@ async def keyword_analysis(request: KeywordRequest):
 
 
 # -------------------------
-# Dashboard / User Progress
+# Dashboard / User Progress (Unchanged)
 # -------------------------
 @router.get("/dashboard/progress")
 async def get_progress(current_user: User = Depends(get_current_user)):
-    # FIX: Corrected parameters passed to get_user_reports
     analyses = get_user_reports(current_user["_id"])
     total_audits = len(analyses)
 
     if total_audits == 0:
         return {"message": "No data yet", "average_score": 0, "total_audits": 0}
 
-    # Compute average score
     scores = [
         a["data"].get("score", 0)
         for a in analyses
@@ -67,7 +64,7 @@ async def get_progress(current_user: User = Depends(get_current_user)):
 
 
 # -------------------------
-# URL Analysis Models
+# URL Analysis Models (Unchanged)
 # -------------------------
 class LinksModel(BaseModel):
     internal: List[str] = []
@@ -122,16 +119,49 @@ class AnalyzeResponse(BaseModel):
 
 
 # -------------------------
-# URL SEO Analysis Endpoint
+# URL SEO Analysis Endpoint (PUBLIC ACCESS)
 # -------------------------
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_website(
-    request: AnalyzeRequest, current_user: User = Depends(get_current_user)
+    request: AnalyzeRequest,
+    current_user: Optional[User] = Depends(get_current_user),
 ):
     result = await analyze_url(request.url)
 
     if "error" in result:
         return result
 
-    save_seo_report(current_user["_id"], request.url, result)
+    if current_user:
+        save_seo_report(current_user["_id"], request.url, result)
+
+    return result
+
+
+# -------------------------------------------------
+# ✨ NEW: AI Analysis Endpoint
+# -------------------------------------------------
+# Models matching the frontend request/response for the AI Chat Modal
+class AiQueryContext(BaseModel):
+    url: str
+    latestScore: Optional[int] = None
+    recommendations: Optional[str] = None
+    issues: Optional[str] = None
+
+
+class AiQueryRequest(BaseModel):
+    query: str
+    context: AiQueryContext
+
+
+class AiQueryResponse(BaseModel):
+    generated_text: str = ""
+    error: Optional[str] = None
+
+
+@router.post("/ask_ai", response_model=AiQueryResponse)
+async def ask_ai(request: AiQueryRequest):
+    """Endpoint for generating contextual SEO advice via OpenAI."""
+    # This calls the service function we defined in seo_service.py
+    result = await ask_ai_for_report(request.query, request.context.dict())
+
     return result

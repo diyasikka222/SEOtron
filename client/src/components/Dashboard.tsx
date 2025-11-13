@@ -18,23 +18,14 @@ import {
   Share2,
   Zap,
   Check,
-  User, // ✨ 1. Imported User icon
+  User,
+  Send,
+  Terminal,
+  Clipboard,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-
-/**
- * SEOtron — Deep Dashboard (enhanced with Plans, Scheduler, Actions, Logout)
- *
- * Added features:
- * - Plans modal (Free / Premium / Enterprise) — choosing plan toggles Pro flags
- * - Account-level Pro (isProUser) and per-site proEnabled flag
- * - Scheduler that auto-runs scans while page is open (daily/weekly/monthly)
- * - Actions modal for bulk operations (rescan all, export all, clear all)
- * - Logout button (clears localStorage "user" and navigates to /login)
- * - Pro features panel shows unlocked/locked states
- *
- * Replace your existing DashboardDeep.tsx with this file.
- */
+// Assuming you implement this function in src/api.ts
+import { askAiForReport } from "../api";
 
 // -------------------- Types --------------------
 type ScanPoint = { ts: string; score: number };
@@ -58,7 +49,7 @@ type Site = {
   settings?: { schedule?: string | null; proEnabled?: boolean };
 };
 
-// -------------------- Storage --------------------
+// -------------------- Storage & Helpers --------------------
 const STORAGE_KEY = "seotron_dashboard_v2";
 const getStore = (): { sites: Site[] } => {
   try {
@@ -72,7 +63,6 @@ const getStore = (): { sites: Site[] } => {
 const setStore = (s: { sites: Site[] }) =>
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
 
-// -------------------- Helpers --------------------
 const uid = (n = 6) =>
   Math.random()
     .toString(36)
@@ -90,7 +80,7 @@ const toCSV = (rows: Record<string, any>[]) => {
   ].join("\n");
 };
 
-// -------------------- Fake analyzer (placeholder) --------------------
+// -------------------- Mock analyzer (placeholder) --------------------
 async function fakeAnalyze(url: string) {
   try {
     await new Promise((r) => setTimeout(r, 450 + Math.random() * 400));
@@ -145,15 +135,330 @@ async function fakeAnalyze(url: string) {
   }
 }
 
-// -------------------- Small UI parts (LockedTeaser & Modal kept) --------------------
-const badge = (text: string) => ({
-  padding: "6px 8px",
+// -------------------- STYLES AND HELPERS (Must be defined first) --------------------
+
+const rootStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  position: "relative",
+  fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial",
+  color: "#e6eef8",
+  background: "#0b0c0f",
+};
+
+const bgStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 0,
+  background:
+    "radial-gradient(55vw 55vw at 18% 78%, rgba(255,0,92,0.22), transparent 60%)," +
+    "radial-gradient(45vw 45vw at 82% 22%, rgba(0,255,224,0.18), transparent 55%)," +
+    "radial-gradient(70vw 70vw at 50% 45%, rgba(120,80,255,0.12), transparent 60%)",
+  pointerEvents: "none",
+};
+
+const inputStyle: React.CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.06)",
+  background: "rgba(255,255,255,0.02)",
+  color: "#fff",
+  minWidth: 360,
+  outline: "none",
+};
+
+const primaryBtn: React.CSSProperties = {
+  background: "linear-gradient(135deg,#7c3aed,#00c2ff)",
+  border: "none",
+  padding: "10px 12px",
+  borderRadius: 10,
+  color: "#fff",
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+const ghostBtn: React.CSSProperties = {
+  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(255,255,255,0.06)",
+  padding: "8px 10px",
+  borderRadius: 10,
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const mutedBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "1px solid rgba(255,255,255,0.04)",
+  padding: "8px 10px",
   borderRadius: 8,
-  background: "rgba(255,255,255,0.04)",
-  fontSize: 12,
-  display: "inline-block",
-  color: "white",
-});
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const dangerBtn: React.CSSProperties = {
+  background: "#ef4444",
+  border: "none",
+  padding: "8px 10px",
+  borderRadius: 8,
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const cardInline: React.CSSProperties = {
+  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(255,255,255,0.06)",
+  borderRadius: 10,
+  padding: 10,
+};
+
+const siteCardStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03))",
+  border: "1px solid rgba(255,255,255,0.06)",
+  borderRadius: 12,
+  padding: 12,
+  boxShadow: "0 10px 24px rgba(2,6,23,0.6)",
+};
+
+const cardHover: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03))",
+  border: "1px solid rgba(255,255,255,0.06)",
+  borderRadius: 12,
+  padding: 12,
+  boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
+};
+
+const panel: React.CSSProperties = {
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
+  border: "1px solid rgba(255,255,255,0.04)",
+  padding: 12,
+  borderRadius: 10,
+};
+
+const panelSmall: React.CSSProperties = {
+  background: "rgba(255,255,255,0.02)",
+  padding: 10,
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.04)",
+};
+
+const viewBtn: React.CSSProperties = {
+  background: "linear-gradient(135deg,#00c2ff,#7c3aed)",
+  border: "none",
+  padding: "10px 12px",
+  borderRadius: 8,
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const toastStyle: React.CSSProperties = {
+  position: "fixed",
+  right: 20,
+  bottom: 20,
+  background: "linear-gradient(135deg,#7c3aed,#00c2ff)",
+  padding: "10px 14px",
+  borderRadius: 10,
+  color: "#fff",
+  zIndex: 999,
+};
+
+const ghostSmall: React.CSSProperties = {
+  ...ghostBtn,
+  padding: "8px 10px",
+  fontSize: 13,
+};
+const primarySmall: React.CSSProperties = {
+  ...primaryBtn,
+  padding: "8px 10px",
+  fontSize: 13,
+};
+const selectStyle: React.CSSProperties = {
+  padding: 8,
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.06)",
+  background: "rgba(255,255,255,0.02)",
+  color: "#fff",
+};
+const smallStat: React.CSSProperties = {
+  background: "rgba(255,255,255,0.02)",
+  padding: 10,
+  borderRadius: 8,
+  textAlign: "center",
+};
+
+// -------------------- helpers used in styles --------------------
+function scoreColor(s: number | undefined | null) {
+  const v = s ?? 0;
+  if (v < 40) return "#ef4444";
+  if (v < 75) return "#f59e0b";
+  return "#22c55e";
+}
+
+const ProgressBar: React.FC<{ value: number; height?: number }> = ({
+  value,
+  height = 10,
+}) => (
+  <div
+    style={{
+      width: "100%",
+      background: "rgba(255,255,255,0.06)",
+      borderRadius: height,
+      overflow: "hidden",
+    }}
+  >
+    <div
+      style={{
+        height,
+        width: `${clamp(value, 0, 100)}%`,
+        background: value < 40 ? "#ef4444" : value < 75 ? "#f59e0b" : "#22c55e",
+        transition: "width 500ms ease",
+      }}
+    />
+  </div>
+);
+
+// -------------------- MODAL / TEASER DEFINITIONS (DEFINED FIRST) --------------------
+
+function ChecklistBlock({
+  site,
+  onToggle,
+  onSave,
+}: {
+  site: Site;
+  onToggle: (issueId: string) => void;
+  onSave: () => void;
+}) {
+  const items: Issue[] = useMemo(() => {
+    const base = site.issues ?? [];
+    const synth: Issue[] = [
+      {
+        id: "meta",
+        label: "Meta description quality",
+        severity: 60,
+        category: "On-page",
+        fixed: false,
+      },
+      {
+        id: "title",
+        label: "Title tag presence & length",
+        severity: 50,
+        category: "On-page",
+        fixed: false,
+      },
+      {
+        id: "content_depth",
+        label: "Content depth (word count)",
+        severity: 55,
+        category: "Content",
+        fixed: false,
+      },
+      {
+        id: "h1",
+        label: "Heading (H1) usage",
+        severity: 45,
+        category: "Structure",
+        fixed: false,
+      },
+      {
+        id: "alt",
+        label: "Image alt text coverage",
+        severity: 40,
+        category: "Accessibility",
+        fixed: false,
+      },
+      {
+        id: "structured",
+        label: "Structured data (schema)",
+        severity: 35,
+        category: "Technical",
+        fixed: false,
+      },
+    ];
+    const presentIds = new Set(base.map((b) => b.id));
+    const merged = [...base, ...synth.filter((s) => !presentIds.has(s.id))];
+    merged.sort((a, b) => (b.severity ?? 0) - (a.severity ?? 0));
+    return merged;
+  }, [site.issues]);
+
+  const doneCount = items.filter((i) => i.fixed).length;
+  const scoreEstimate = Math.round((doneCount / (items.length || 1)) * 100);
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ fontWeight: 800 }}>Progress</div>
+        <div style={{ fontSize: 12, opacity: 0.8 }}>
+          {doneCount}/{items.length} tasks
+        </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <ProgressBar value={scoreEstimate} />
+      </div>
+
+      <div style={{ marginTop: 12, maxHeight: 300, overflow: "auto" }}>
+        {items.map((it) => (
+          <div
+            key={it.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "8px 0",
+              borderBottom: "1px dashed rgba(255,255,255,0.03)",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700 }}>{it.label}</div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>
+                {it.category} • Severity {it.severity ?? "—"}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ minWidth: 120 }}>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>Impact</div>
+                <div style={{ fontWeight: 800 }}>{it.severity ?? 40}/100</div>
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={!!it.fixed}
+                  onChange={() => onToggle(it.id)}
+                />
+                <span style={{ fontSize: 12 }}>Mark Fixed</span>
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 8,
+          marginTop: 12,
+        }}
+      >
+        <button onClick={onSave} style={primarySmall}>
+          Save checklist
+        </button>
+        <button
+          onClick={() => alert("Export checklist (placeholder)")}
+          style={ghostSmall}
+        >
+          Export
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const Modal: React.FC<{
   onClose: () => void;
@@ -174,7 +479,7 @@ const Modal: React.FC<{
     <div
       style={{
         width: wide ? "95vw" : "92vw",
-        maxWidth: 1200,
+        maxWidth: wide ? 1200 : 600, // Adjusted max width
         maxHeight: "92vh",
         overflow: "auto",
         borderRadius: 12,
@@ -277,59 +582,7 @@ const LockedTeaser: React.FC<{
   </div>
 );
 
-// -------------------- Plans Modal (self-contained UI using your Pricing data) --------------------
-type Plan = {
-  title: string;
-  popular: boolean;
-  price: number;
-  description: string;
-  buttonText: string;
-  benefits: string[];
-};
-const PLANS: Plan[] = [
-  {
-    title: "Free",
-    popular: false,
-    price: 0,
-    description: "Perfect for individuals just starting out.",
-    buttonText: "Get Started",
-    benefits: [
-      "1 Team member",
-      "2 GB Storage",
-      "Up to 4 pages",
-      "Community support",
-    ],
-  },
-  {
-    title: "Premium",
-    popular: true,
-    price: 9,
-    description: "Best for small teams who need more power.",
-    buttonText: "Start Free Trial",
-    benefits: [
-      "5 Team members",
-      "10 GB Storage",
-      "Unlimited pages",
-      "Priority support",
-      "Advanced analytics",
-    ],
-  },
-  {
-    title: "Enterprise",
-    popular: false,
-    price: 29,
-    description: "For larger teams needing full-scale solutions.",
-    buttonText: "Contact Us",
-    benefits: [
-      "Unlimited Team members",
-      "100 GB Storage",
-      "Custom integrations",
-      "Dedicated support",
-      "Advanced security",
-    ],
-  },
-];
-
+// -------------------- Plans Modal --------------------
 function PlansModal({
   onClose,
   onChoosePlan,
@@ -339,6 +592,50 @@ function PlansModal({
   onChoosePlan: (planTitle: string) => void;
   currentPlan?: string | null;
 }) {
+  const PLANS: Plan[] = [
+    {
+      title: "Free",
+      popular: false,
+      price: 0,
+      description: "Perfect for individuals just starting out.",
+      buttonText: "Get Started",
+      benefits: [
+        "1 Team member",
+        "2 GB Storage",
+        "Up to 4 pages",
+        "Community support",
+      ],
+    },
+    {
+      title: "Premium",
+      popular: true,
+      price: 9,
+      description: "Best for small teams who need more power.",
+      buttonText: "Start Free Trial",
+      benefits: [
+        "5 Team members",
+        "10 GB Storage",
+        "Unlimited pages",
+        "Priority support",
+        "Advanced analytics",
+      ],
+    },
+    {
+      title: "Enterprise",
+      popular: false,
+      price: 29,
+      description: "For larger teams needing full-scale solutions.",
+      buttonText: "Contact Us",
+      benefits: [
+        "Unlimited Team members",
+        "100 GB Storage",
+        "Custom integrations",
+        "Dedicated support",
+        "Advanced security",
+      ],
+    },
+  ];
+
   return (
     <div style={{ padding: 6 }}>
       <h2 style={{ fontSize: 20, fontWeight: 900 }}>Choose a plan</h2>
@@ -490,7 +787,7 @@ function ActionsModal({
   );
 }
 
-// -------------------- ExpandedSitePanel (inline deep view) --------------------
+// -------------------- ExpandedSitePanel (Inline Deep View) --------------------
 function ExpandedSitePanel({
   site,
   onClose,
@@ -727,7 +1024,7 @@ function ExpandedSitePanel({
               }}
             >
               <div style={{ fontWeight: 900 }}>Pro Insights</div>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>
                 {site.settings?.proEnabled ? "Unlocked" : "Locked"}
               </div>
             </div>
@@ -767,9 +1064,213 @@ function ExpandedSitePanel({
     </div>
   );
 }
+// -------------------- AI Chat Modal Component (Complete Implementation) --------------------
+const AiModal = ({
+  onClose,
+  site,
+  notify,
+}: {
+  onClose: () => void;
+  site: Site;
+  notify: (msg: string) => void;
+}) => {
+  const [query, setQuery] = useState("");
+  const [response, setResponse] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const responseRef = useRef(null);
+  const [hasError, setHasError] = useState(false);
+
+  // Fake analysis steps for display
+  const loadingMessages = [
+    "Analyzing current site score and key metrics...",
+    "Comparing top issues with best practices...",
+    "Consulting SEO strategy database for optimal recommendations...",
+    "Generating contextual advice with Gemini...",
+  ];
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const askAi = async () => {
+    if (!query.trim()) return;
+
+    setAiLoading(true);
+    setResponse("");
+    setHasError(false);
+    setLoadingStep(0);
+
+    // Package relevant site data for AI context
+    const context = {
+      url: site.url,
+      latestScore: site.latestScore,
+      recommendations: site.recommendations?.map((r) => r.title).join(", "),
+      issues: site.issues
+        ?.filter((i) => !i.fixed)
+        .map((i) => i.label)
+        .join(", "),
+    };
+
+    // --- FAKE LOADING SEQUENCE ---
+    const loadingInterval = setInterval(() => {
+      setLoadingStep((prev) =>
+        prev < loadingMessages.length - 1 ? prev + 1 : prev,
+      );
+    }, 1000);
+
+    try {
+      // Fake delay before attempting API call (to let loading sequence run)
+      await new Promise((r) => setTimeout(r, 3000));
+
+      // Call the implemented API function
+      const result = await askAiForReport(query, context);
+
+      clearInterval(loadingInterval);
+      setLoadingStep(loadingMessages.length);
+
+      if (result && result.error) {
+        setResponse(result.error);
+        setHasError(true);
+      } else if (result && result.generated_text) {
+        setResponse(result.generated_text);
+        notify("AI analysis complete.");
+      } else {
+        setResponse("Could not get a valid response from the AI service.");
+        setHasError(true);
+      }
+    } catch (err: any) {
+      clearInterval(loadingInterval);
+      setResponse("Network error or API failure. Check console for details.");
+      setHasError(true);
+      console.error("AI API Call Failed:", err);
+    } finally {
+      setAiLoading(false);
+      setQuery("");
+    }
+  };
+
+  const handleCopy = () => {
+    if (response) {
+      // Fallback for clipboard access issues in iframes
+      const textArea = document.createElement("textarea");
+      textArea.value = response;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      textArea.remove();
+      notify("AI response copied!");
+    }
+  };
+
+  return (
+    <div style={{ padding: 6 }}>
+      <h2
+        style={{
+          fontSize: 20,
+          fontWeight: 900,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <Terminal size={24} style={{ marginRight: 8, color: "#00c2ff" }} />
+        Ask AI - Site Context: {site.title ?? site.url}
+      </h2>
+      <p style={{ opacity: 0.8, marginBottom: 12 }}>
+        Ask a specific question about your site's SEO problems or strategy.
+      </p>
+
+      {/* Response Area */}
+      <div
+        ref={responseRef}
+        style={{
+          minHeight: 200,
+          maxHeight: 350,
+          overflowY: "auto",
+          padding: 16,
+          borderRadius: 10,
+          border: `1px solid ${hasError ? "rgba(255, 66, 66, 0.4)" : "rgba(124,58,237,0.2)"}`,
+          background: hasError
+            ? "rgba(255, 66, 66, 0.05)"
+            : "rgba(255, 255, 255, 0.02)",
+          whiteSpace: "pre-wrap",
+          fontSize: 14,
+          color: hasError ? "#FF8888" : "#fff",
+          position: "relative",
+        }}
+      >
+        {aiLoading ? (
+          <div
+            style={{
+              margin: "auto",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingTop: 30,
+            }}
+          >
+            <RefreshCcw size={18} className="animate-spin text-primary mb-2" />
+            <p style={{ fontSize: 14, opacity: 0.9, margin: 0 }}>
+              {loadingMessages[loadingStep]}
+            </p>
+            <p style={{ fontSize: 12, opacity: 0.6, margin: 0, marginTop: 4 }}>
+              {loadingStep < loadingMessages.length - 1
+                ? "Please wait..."
+                : "Awaiting response from AI..."}
+            </p>
+          </div>
+        ) : response ? (
+          <>
+            {response}
+            <button
+              onClick={handleCopy}
+              style={{
+                ...ghostBtn,
+                position: "absolute",
+                top: 8,
+                right: 8,
+                padding: 4,
+                opacity: 0.7,
+              }}
+              title="Copy to Clipboard"
+            >
+              <Clipboard size={14} />
+            </button>
+          </>
+        ) : (
+          <div style={{ color: "rgba(255,255,255,0.5)" }}>
+            Example questions: "How can I improve the score from{" "}
+            {site.latestScore}?", "Suggest 3 quick fix strategies for my broken
+            links."
+          </div>
+        )}
+      </div>
+
+      {/* Input and Send Button */}
+      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !aiLoading) askAi();
+          }}
+          placeholder="Ask a strategic question about your SEO..."
+          style={{ ...inputStyle, flexGrow: 1 }}
+          disabled={aiLoading}
+        />
+        <button
+          onClick={askAi}
+          style={{ ...primaryBtn, padding: "10px 14px" }}
+          disabled={aiLoading || !query.trim()}
+        >
+          <Send size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // -------------------- Main Component --------------------
-export default function DashboardDeep() {
+export const DashboardDeep = () => {
+  // FIX: Changed export to named const
   const location = useLocation();
   const onboardingData = (location && (location as any).state) || undefined;
   const navigate = useNavigate();
@@ -795,6 +1296,9 @@ export default function DashboardDeep() {
   // new modals
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
+
+  // AI Modal State
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const schedulerRef = useRef<number | null>(null);
 
@@ -1226,8 +1730,7 @@ export default function DashboardDeep() {
     });
   };
 
-  // -------------------- Scheduler logic --------------------
-  // scheduler runs every minute while dashboard is open and triggers scans for sites whose schedule is due
+  // -------------------- Scheduler logic (Unchanged) --------------------
   useEffect(() => {
     // cleanup previous
     if (schedulerRef.current) {
@@ -1310,7 +1813,7 @@ export default function DashboardDeep() {
   // -------------------- Logout --------------------
   const logout = () => {
     if (!confirm("Log out?")) return;
-    // ✨ FIX: Changed "user" to "token" to match your App.tsx
+    // FIX: Changed "user" to "token" to match your App.tsx
     localStorage.removeItem("token");
     localStorage.removeItem("account_is_pro");
     setIsProUser(false);
@@ -1328,6 +1831,11 @@ export default function DashboardDeep() {
   };
 
   // -------------------- render --------------------
+  const selectedSite = useMemo(
+    () => getSiteById(selectedSiteId),
+    [selectedSiteId, state.sites],
+  );
+
   return (
     <div
       style={{
@@ -1389,7 +1897,7 @@ export default function DashboardDeep() {
               Upgrade
             </button>
 
-            {/* ✨ 2. ADDED Profile Button */}
+            {/* Profile Button */}
             <button
               onClick={() => navigate("/profile")}
               style={ghostBtn}
@@ -1483,7 +1991,6 @@ export default function DashboardDeep() {
                         ? "linear-gradient(135deg,#7c3aed,#00c2ff)"
                         : "rgba(255,255,255,0.02)",
                     color: "#fff",
-                    cursor: "pointer",
                     fontWeight: selectedSiteId === s.id ? 800 : 600,
                   }}
                 >
@@ -1721,7 +2228,14 @@ export default function DashboardDeep() {
                 </button>
                 <button
                   style={primaryBtn}
-                  onClick={() => notify("Ask AI (placeholder)")}
+                  // FIX: Changed onClick to open the new AI Modal
+                  onClick={() => {
+                    if (selectedSite) {
+                      setShowAiModal(true);
+                    } else {
+                      notify("Please select a site tab first.");
+                    }
+                  }}
                 >
                   Ask AI
                 </button>
@@ -1865,332 +2379,8 @@ export default function DashboardDeep() {
           />
         </Modal>
       )}
-
       {/* toast */}
       {toast && <div style={toastStyle}>{toast}</div>}
     </div>
   );
-}
-
-// -------------------- ChecklistBlock --------------------
-function ChecklistBlock({
-  site,
-  onToggle,
-  onSave,
-}: {
-  site: Site;
-  onToggle: (issueId: string) => void;
-  onSave: () => void;
-}) {
-  const items: Issue[] = useMemo(() => {
-    const base = site.issues ?? [];
-    const synth: Issue[] = [
-      {
-        id: "meta",
-        label: "Meta description quality",
-        severity: 60,
-        category: "On-page",
-        fixed: false,
-      },
-      {
-        id: "title",
-        label: "Title tag presence & length",
-        severity: 50,
-        category: "On-page",
-        fixed: false,
-      },
-      {
-        id: "content_depth",
-        label: "Content depth (word count)",
-        severity: 55,
-        category: "Content",
-        fixed: false,
-      },
-      {
-        id: "h1",
-        label: "Heading (H1) usage",
-        severity: 45,
-        category: "Structure",
-        fixed: false,
-      },
-      {
-        id: "alt",
-        label: "Image alt text coverage",
-        severity: 40,
-        category: "Accessibility",
-        fixed: false,
-      },
-      {
-        id: "structured",
-        label: "Structured data (schema)",
-        severity: 35,
-        category: "Technical",
-        fixed: false,
-      },
-    ];
-    const presentIds = new Set(base.map((b) => b.id));
-    const merged = [...base, ...synth.filter((s) => !presentIds.has(s.id))];
-    merged.sort((a, b) => (b.severity ?? 0) - (a.severity ?? 0));
-    return merged;
-  }, [site.issues]);
-
-  const doneCount = items.filter((i) => i.fixed).length;
-  const scoreEstimate = Math.round((doneCount / (items.length || 1)) * 100);
-
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ fontWeight: 800 }}>Progress</div>
-        <div style={{ fontSize: 12, opacity: 0.8 }}>
-          {doneCount}/{items.length} tasks
-        </div>
-      </div>
-      <div style={{ marginTop: 8 }}>
-        <ProgressBar value={scoreEstimate} />
-      </div>
-
-      <div style={{ marginTop: 12, maxHeight: 300, overflow: "auto" }}>
-        {items.map((it) => (
-          <div
-            key={it.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "8px 0",
-              borderBottom: "1px dashed rgba(255,255,255,0.03)",
-            }}
-          >
-            <div>
-              <div style={{ fontWeight: 700 }}>{it.label}</div>
-              <div style={{ fontSize: 12, opacity: 0.8 }}>
-                {it.category} • Severity {it.severity ?? "—"}
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ minWidth: 120 }}>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Impact</div>
-                <div style={{ fontWeight: 800 }}>{it.severity ?? 40}/100</div>
-              </div>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={!!it.fixed}
-                  onChange={() => onToggle(it.id)}
-                />
-                <span style={{ fontSize: 12 }}>Mark Fixed</span>
-              </label>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 8,
-          marginTop: 12,
-        }}
-      >
-        <button onClick={onSave} style={primarySmall}>
-          Save checklist
-        </button>
-        <button
-          onClick={() => alert("Export checklist (placeholder)")}
-          style={ghostSmall}
-        >
-          Export
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// -------------------- styles --------------------
-const rootStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  position: "relative",
-  fontFamily: "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial",
-  color: "#e6eef8",
-  background: "#0b0c0f",
 };
-
-const bgStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 0,
-  background:
-    "radial-gradient(55vw 55vw at 18% 78%, rgba(255,0,92,0.22), transparent 60%)," +
-    "radial-gradient(45vw 45vw at 82% 22%, rgba(0,255,224,0.18), transparent 55%)," +
-    "radial-gradient(70vw 70vw at 50% 45%, rgba(120,80,255,0.12), transparent 60%)",
-  pointerEvents: "none",
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.06)",
-  background: "rgba(255,255,255,0.02)",
-  color: "#fff",
-  minWidth: 360,
-  outline: "none",
-};
-
-const primaryBtn: React.CSSProperties = {
-  background: "linear-gradient(135deg,#7c3aed,#00c2ff)",
-  border: "none",
-  padding: "10px 12px",
-  borderRadius: 10,
-  color: "#fff",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const ghostBtn: React.CSSProperties = {
-  background: "rgba(255,255,255,0.02)",
-  border: "1px solid rgba(255,255,255,0.06)",
-  padding: "8px 10px",
-  borderRadius: 10,
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const mutedBtn: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid rgba(255,255,255,0.04)",
-  padding: "8px 10px",
-  borderRadius: 8,
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const dangerBtn: React.CSSProperties = {
-  background: "#ef4444",
-  border: "none",
-  padding: "8px 10px",
-  borderRadius: 8,
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const cardInline: React.CSSProperties = {
-  background: "rgba(255,255,255,0.02)",
-  border: "1px solid rgba(255,255,255,0.06)",
-  borderRadius: 10,
-  padding: 10,
-};
-
-const siteCardStyle: React.CSSProperties = {
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03))",
-  border: "1px solid rgba(255,255,255,0.06)",
-  borderRadius: 12,
-  padding: 12,
-  boxShadow: "0 10px 24px rgba(2,6,23,0.6)",
-};
-
-const cardHover: React.CSSProperties = {
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03))",
-  border: "1px solid rgba(255,255,255,0.06)",
-  borderRadius: 12,
-  padding: 12,
-  boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
-};
-
-const panel: React.CSSProperties = {
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-  border: "1px solid rgba(255,255,255,0.04)",
-  padding: 12,
-  borderRadius: 10,
-};
-
-const panelSmall: React.CSSProperties = {
-  background: "rgba(255,255,255,0.02)",
-  padding: 10,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.04)",
-};
-
-const viewBtn: React.CSSProperties = {
-  background: "linear-gradient(135deg,#00c2ff,#7c3aed)",
-  border: "none",
-  padding: "10px 12px",
-  borderRadius: 8,
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const toastStyle: React.CSSProperties = {
-  position: "fixed",
-  right: 20,
-  bottom: 20,
-  background: "linear-gradient(135deg,#7c3aed,#00c2ff)",
-  padding: "10px 14px",
-  borderRadius: 10,
-  color: "#fff",
-  zIndex: 999,
-};
-
-const ghostSmall: React.CSSProperties = {
-  ...ghostBtn,
-  padding: "8px 10px",
-  fontSize: 13,
-};
-const primarySmall: React.CSSProperties = {
-  ...primaryBtn,
-  padding: "8px 10px",
-  fontSize: 13,
-};
-const selectStyle: React.CSSProperties = {
-  padding: 8,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.06)",
-  background: "rgba(255,255,255,0.02)",
-  color: "#fff",
-};
-const smallStat: React.CSSProperties = {
-  background: "rgba(255,255,255,0.02)",
-  padding: 10,
-  borderRadius: 8,
-  textAlign: "center",
-};
-
-// -------------------- helpers used in styles --------------------
-function scoreColor(s: number | undefined | null) {
-  const v = s ?? 0;
-  if (v < 40) return "#ef4444";
-  if (v < 75) return "#f59e0b";
-  return "#22c55e";
-}
-
-const ProgressBar: React.FC<{ value: number; height?: number }> = ({
-  value,
-  height = 10,
-}) => (
-  <div
-    style={{
-      width: "100%",
-      background: "rgba(255,255,255,0.06)",
-      borderRadius: height,
-      overflow: "hidden",
-    }}
-  >
-    <div
-      style={{
-        height,
-        width: `${clamp(value, 0, 100)}%`,
-        background: value < 40 ? "#ef4444" : value < 75 ? "#f59e0b" : "#22c55e",
-        transition: "width 500ms ease",
-      }}
-    />
-  </div>
-);

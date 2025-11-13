@@ -1,18 +1,28 @@
+# Removed: import openai
+import asyncio
 import os
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from google import genai  # ✨ NEW: Import Google GenAI library
+from google.genai import types  # ✨ NEW: Import Types
 from playwright.async_api import async_playwright
 
 # Load .env variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_PAGESPEED_API_KEY")
+# Using the key specific to the Gemini API
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Initialize Gemini client
+# The client automatically reads the GEMINI_API_KEY environment variable.
+gemini_client = genai.Client()
 
 
 # -------------------------------------------------
-# Keyword Analysis (Dummy)
+# Keyword Analysis (Dummy - Unchanged)
 # -------------------------------------------------
 def analyze_keyword(keyword: str):
     return {
@@ -24,7 +34,7 @@ def analyze_keyword(keyword: str):
 
 
 # -------------------------------------------------
-# Google PageSpeed Insights
+# Google PageSpeed Insights (Unchanged)
 # -------------------------------------------------
 def get_pagespeed_insights(url: str, strategy: str = "desktop"):
     endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
@@ -50,7 +60,7 @@ def get_pagespeed_insights(url: str, strategy: str = "desktop"):
 
 
 # -------------------------------------------------
-# URL SEO Analysis
+# URL SEO Analysis (Original Content)
 # -------------------------------------------------
 async def analyze_url(url: str):
     # ✅ Normalize URL
@@ -68,9 +78,6 @@ async def analyze_url(url: str):
     html = None
     response_headers = {}
 
-    # -------------------------------------------------
-    # 1️⃣ Try using Playwright
-    # -------------------------------------------------
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
@@ -84,9 +91,6 @@ async def analyze_url(url: str):
 
     except Exception as e:
         print(f"⚠️ Playwright failed: {e}")
-        # -------------------------------------------------
-        # 2️⃣ Fallback to requests
-        # -------------------------------------------------
         try:
             res = requests.get(url, headers=headers, timeout=10)
             res.raise_for_status()
@@ -114,52 +118,38 @@ async def analyze_url(url: str):
                 "error": str(e2),
             }
 
-    # -------------------------------------------------
-    # 3️⃣ Parse HTML with BeautifulSoup
-    # -------------------------------------------------
     soup = BeautifulSoup(html, "html.parser")
-
-    # --- Metadata ---
     title = soup.title.string.strip() if soup.title else "No Title"
-
     meta_desc = soup.find("meta", attrs={"name": "description"})
     description = (
         meta_desc.get("content").strip()
         if meta_desc and meta_desc.get("content")
         else None
     )
-
     meta_kw = soup.find("meta", attrs={"name": "keywords"})
     keywords = (
         [kw.strip() for kw in meta_kw.get("content", "").split(",") if kw]
         if meta_kw
         else []
     )
-
     canonical_tag = soup.find("link", rel="canonical")
     canonical = canonical_tag.get("href") if canonical_tag else None
-
     robots_tag = soup.find("meta", attrs={"name": "robots"})
     robots_content = (
         robots_tag.get("content").lower()
         if robots_tag and robots_tag.get("content")
         else None
     )
-
     favicon_tag = soup.find("link", rel="icon")
     favicon = (
         urljoin(url, favicon_tag.get("href"))
         if favicon_tag and favicon_tag.get("href")
         else None
     )
-
-    # --- Headings ---
     headings = {
         f"h{i}": [h.get_text(strip=True) for h in soup.find_all(f"h{i}")]
         for i in range(1, 7)
     }
-
-    # --- Content stats ---
     all_text = soup.get_text()
     word_count = len(all_text.split())
     paragraph_count = len(soup.find_all("p"))
@@ -176,8 +166,6 @@ async def analyze_url(url: str):
         for img in image_tags
         if img.get("src") and len(img.get("src")) > 50
     ]
-
-    # --- Links ---
     all_links = [a.get("href") for a in soup.find_all("a", href=True)]
     parsed_url = urlparse(url)
     internal, external, nofollow, mailto, tel = [], [], [], [], []
@@ -198,13 +186,11 @@ async def analyze_url(url: str):
         if a_tag.get("rel") and "nofollow" in a_tag.get("rel"):
             nofollow.append(abs_url)
 
-    # --- Structured data ---
     structured_data = [
         script.get_text()
         for script in soup.find_all("script", attrs={"type": "application/ld+json"})
     ]
 
-    # --- Performance meta ---
     page_size = len(html.encode("utf-8")) / 1024
     performance_data = {
         "page_size_kb": round(page_size, 2),
@@ -214,15 +200,9 @@ async def analyze_url(url: str):
         "expires": response_headers.get("expires"),
     }
 
-    # --- Google PageSpeed scores ---
     google_scores = get_pagespeed_insights(url, "desktop")
-
-    # --- Simple score heuristic ---
     score = 80 if description and len(description) > 50 else 50
 
-    # -------------------------------------------------
-    # 4️⃣ Return structured JSON
-    # -------------------------------------------------
     return {
         "title": title,
         "metaTags": {
@@ -254,4 +234,48 @@ async def analyze_url(url: str):
         "google_scores": google_scores,
         "score": score,
         "keywords": keywords,
+        "error": None,
     }
+
+
+# -------------------------------------------------
+# ✨ NEW: AI Analysis Service (Using Gemini)
+# -------------------------------------------------
+async def ask_ai_for_report(query: str, context: dict):
+    """Generates an SEO response using Google Gemini based on user query and site context."""
+    if not GEMINI_API_KEY:
+        return {"error": "Gemini API Key is not configured on the backend."}
+
+    site_info = (
+        f"The current site is {context.get('url')} with a latest SEO score of {context.get('latestScore')}/100. "
+        f"Current issues include: {context.get('issues') or 'None listed'}. "
+        f"Top recommendations are: {context.get('recommendations') or 'None listed'}."
+    )
+
+    system_instruction = (
+        "You are SEOtron, a helpful, expert SEO analyst. Your task is to provide concise, "
+        "actionable, and professional advice based on the user's question and the provided site context. "
+        "Format your answer clearly using markdown (lists, bolding, headings)."
+    )
+
+    try:
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",  # Fast, cost-effective, and powerful model
+            contents=[
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(
+                            f"SYSTEM INSTRUCTION: {system_instruction}\n\nSITE CONTEXT: {site_info}\n\nUSER QUESTION: {query}"
+                        )
+                    ],
+                )
+            ],
+            config=types.GenerateContentConfig(
+                temperature=0.4,
+            ),
+        )
+
+        return {"generated_text": response.text, "error": None}
+    except Exception as e:
+        return {"error": f"Gemini API Error: {str(e)}"}

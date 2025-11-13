@@ -8,6 +8,7 @@ const API_BASE = "http://127.0.0.1:8000";
 // -------------------------
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
+  // CRITICAL: Must return Authorization header if token exists
   return { Authorization: `Bearer ${token}` };
 };
 
@@ -16,6 +17,7 @@ const getAuthHeader = () => {
 // -------------------------
 const handleApiError = (error: any) => {
   if (axios.isAxiosError(error)) {
+    // If the server returns a 401, force the user to log out and redirect
     if (error.response?.status === 401) {
       alert("Your session has expired. Please log in again.");
       localStorage.removeItem("token");
@@ -27,7 +29,7 @@ const handleApiError = (error: any) => {
 };
 
 // -------------------------
-// User APIs
+// User APIs (Unchanged)
 // -------------------------
 export const signupUser = async (data: {
   username: string;
@@ -63,9 +65,8 @@ export const getCurrentUser = async () => {
   }
 };
 
-// ✨ --- NEW FUNCTION --- ✨
-// This function sends the onboarding data to the backend.
-// We assume a POST endpoint at /users/me/onboard
+// -------------------------
+// Onboarding and Analytics APIs (Unchanged)
 // -------------------------
 export const saveOnboardingData = async (onboardingData: any) => {
   try {
@@ -74,15 +75,12 @@ export const saveOnboardingData = async (onboardingData: any) => {
       onboardingData,
       { headers: getAuthHeader() },
     );
-    return res.data; // Returns success message or updated user
-  } catch (error) {
-    handleApiError(error);
+    return res.data;
+  } catch (error: any) {
+    throw error;
   }
 };
 
-// -------------------------
-// Analytics APIs
-// -------------------------
 export const getAnalytics = async () => {
   try {
     const res = await axios.get(`${API_BASE}/api/analytics`);
@@ -92,9 +90,6 @@ export const getAnalytics = async () => {
   }
 };
 
-// -------------------------
-// SSE subscription
-// -------------------------
 export const subscribeToEvents = (
   onMessage: (data: any) => void,
   onError?: (err: any) => void,
@@ -116,10 +111,12 @@ export const subscribeToEvents = (
     es.close();
   };
 
-  return es; // return so the component can close it on unmount
+  return es;
 };
 
-// SEO APIs
+// -------------------------
+// SEO APIs (Unchanged)
+// -------------------------
 export const analyzeURL = async (url: string) => {
   try {
     const res = await axios.post(
@@ -143,5 +140,29 @@ export const analyzeKeyword = async (keyword: string) => {
     return res.data;
   } catch (error) {
     handleApiError(error);
+  }
+};
+
+// -------------------------
+// ✨ UPDATED AI API CALL (GEMINI)
+// -------------------------
+export const askAiForReport = async (query: string, context: any) => {
+  try {
+    // NOTE: Changed endpoint to /api/ask_ai
+    const res = await axios.post(
+      `${API_BASE}/api/ask_ai`,
+      { query, context },
+      // CRITICAL: We assume the backend handles authentication internally.
+      // We pass the header for premium users, but the backend must tolerate anonymous calls.
+      { headers: getAuthHeader() },
+    );
+    return res.data;
+  } catch (error: any) {
+    // Return error structure for the frontend modal to display
+    return {
+      error:
+        error.response?.data?.detail ||
+        "AI Request Failed (Network Error). Check Server Logs.",
+    };
   }
 };
