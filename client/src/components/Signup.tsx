@@ -1,9 +1,15 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { signupUser } from "../api"; // ✅ Import API function
+import { useNavigate, Link } from "react-router-dom";
+// ✨ 1. Import loginUser in addition to signupUser
+// ✨ FIX: Path changed to ../api (assuming api.ts is in src/)
+import { signupUser, loginUser } from "../api";
+
+// ✨ FIX: Path changed to ./ui/ (assuming ui folder is inside components/)
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+// ✨ FIX: Path changed to ./ (assuming DotGrid is inside components/)
+import DotGrid from "./DotGrid";
 
 export const Signup = () => {
   const navigate = useNavigate();
@@ -26,21 +32,65 @@ export const Signup = () => {
     setError("");
 
     try {
-      const res = await signupUser({ username: fullName, email, password });
-      alert(res.message);           // show success message
-      navigate("/analyze");           // redirect to login page
+      // 2. First, create the user
+      await signupUser({ username: fullName, email, password });
+
+      // 3. If signup is successful, immediately log the user in
+      const loginResponse = await loginUser({ email, password });
+
+      // 4. Check for token and onboarding status from the login response
+      // (Your api.ts already saves the token in localStorage)
+      if (loginResponse && loginResponse.access_token) {
+        if (loginResponse.isOnboarded) {
+          // User is already onboarded
+          navigate("/deepdashboard");
+        } else {
+          // New user, send to onboarding
+          navigate("/onboarding");
+        }
+      } else {
+        // This shouldn't happen if login is successful, but as a fallback
+        throw new Error("Signup succeeded, but auto-login failed.");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Signup failed");
+      setError(err.response?.data?.detail || err.message || "Signup failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section className="container flex items-center justify-center min-h-screen py-20">
-      <Card className="w-full max-w-md p-6 shadow-xl rounded-2xl bg-black/80 backdrop-blur border border-white/10">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold">
+    <section className="relative w-full flex flex-col items-center justify-center min-h-screen py-20 overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <DotGrid
+          dotSize={3}
+          gap={15}
+          baseColor="#303030"
+          activeColor="#61DAFB"
+          proximity={120}
+          shockRadius={250}
+          shockStrength={5}
+          resistance={750}
+          returnDuration={1.5}
+        />
+      </div>
+
+      <h1 className="relative z-10 text-6xl font-extrabold mb-12 bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] bg-clip-text text-transparent">
+        SEOtron
+      </h1>
+
+      <Card className="relative z-10 w-full max-w-md p-6 shadow-xl rounded-2xl bg-black/80 backdrop-blur border border-white/10">
+        <CardHeader className="relative text-center space-y-2">
+          <Link to="/" className="absolute top-0 left-0">
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-white/10 hover:text-white"
+            >
+              &larr; Go Home
+            </Button>
+          </Link>
+
+          <CardTitle className="text-3xl font-bold pt-10">
             <span className="bg-gradient-to-r from-[#F596D3] to-[#D247BF] text-transparent bg-clip-text">
               Create
             </span>{" "}
@@ -85,15 +135,15 @@ export const Signup = () => {
               className="w-full bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
               disabled={loading}
             >
-              {loading ? "Signing Up..." : "Sign Up"}
+              {loading ? "Creating Account..." : "Sign Up"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <a href="/login" className="text-[#61DAFB] hover:underline">
+            <Link to="/login" className="text-[#61DAFB] hover:underline">
               Log in
-            </a>
+            </Link>
           </p>
         </CardContent>
       </Card>

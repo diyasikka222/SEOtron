@@ -1,81 +1,168 @@
-// client/src/api.ts
 import axios from "axios";
 
 // 🔹 Backend base URL
-const API_BASE = "http://127.0.0.1:8000"; // Change if backend is on a different port
+const API_BASE = "http://127.0.0.1:8000";
 
 // -------------------------
 // Helper: Get Auth Header
 // -------------------------
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
+  // CRITICAL: Must return Authorization header if token exists
   return { Authorization: `Bearer ${token}` };
 };
 
 // -------------------------
-// User APIs
+// Handle API errors
 // -------------------------
-
-// Signup
-export const signupUser = async (data: { username: string; email: string; password: string }) => {
-  const res = await axios.post(`${API_BASE}/users/signup`, data);
-  return res.data;
-};
-
-// Login
-export const loginUser = async (data: { email: string; password: string }) => {
-  const res = await axios.post(`${API_BASE}/users/login`, data);
-  // Save token in localStorage
-  localStorage.setItem("token", res.data.access_token);
-  return res.data;
-};
-
-// Get current logged-in user
-export const getCurrentUser = async () => {
-  const res = await axios.get(`${API_BASE}/users/me`, { headers: getAuthHeader() });
-  return res.data;
-};
-
-// Get all users (admin or protected)
-export const getAllUsers = async () => {
-  const res = await axios.get(`${API_BASE}/users/all`, { headers: getAuthHeader() });
-  return res.data;
-};
-
-// Update user
-export const updateUser = async (id: string, data: any) => {
-  const res = await axios.put(`${API_BASE}/users/${id}`, data, { headers: getAuthHeader() });
-  return res.data;
-};
-
-// Delete user
-export const deleteUser = async (id: string) => {
-  const res = await axios.delete(`${API_BASE}/users/${id}`, { headers: getAuthHeader() });
-  return res.data;
+const handleApiError = (error: any) => {
+  if (axios.isAxiosError(error)) {
+    // If the server returns a 401, force the user to log out and redirect
+    if (error.response?.status === 401) {
+      alert("Your session has expired. Please log in again.");
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+  }
+  console.error("API Error:", error);
+  throw error;
 };
 
 // -------------------------
-// SEO APIs
+// User APIs (Unchanged)
 // -------------------------
-
-// Analyze website URL
-export const analyzeURL = async (url: string) => {
+export const signupUser = async (data: {
+  username: string;
+  email: string;
+  password: string;
+}) => {
   try {
-    const res = await axios.post(`${API_BASE}/api/analyze`, { url });
+    const res = await axios.post(`${API_BASE}/users/signup`, data);
     return res.data;
   } catch (error) {
-    console.error("Error in analyzeURL:", error);
+    handleApiError(error);
+  }
+};
+
+export const loginUser = async (data: { email: string; password: string }) => {
+  try {
+    const res = await axios.post(`${API_BASE}/users/login`, data);
+    localStorage.setItem("token", res.data.access_token);
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/users/me`, {
+      headers: getAuthHeader(),
+    });
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+// -------------------------
+// Onboarding and Analytics APIs (Unchanged)
+// -------------------------
+export const saveOnboardingData = async (onboardingData: any) => {
+  try {
+    const res = await axios.post(
+      `${API_BASE}/users/me/onboard`,
+      onboardingData,
+      { headers: getAuthHeader() },
+    );
+    return res.data;
+  } catch (error: any) {
     throw error;
   }
 };
 
-// Analyze keyword
-export const analyzeKeyword = async (keyword: string) => {
+export const getAnalytics = async () => {
   try {
-    const res = await axios.post(`${API_BASE}/api/keyword`, { keyword });
+    const res = await axios.get(`${API_BASE}/api/analytics`);
     return res.data;
   } catch (error) {
-    console.error("Error in analyzeKeyword:", error);
-    throw error;
+    handleApiError(error);
+  }
+};
+
+export const subscribeToEvents = (
+  onMessage: (data: any) => void,
+  onError?: (err: any) => void,
+) => {
+  const es = new EventSource(`${API_BASE}/api/events`);
+
+  es.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    } catch (err) {
+      console.error("Invalid SSE data", err);
+    }
+  };
+
+  es.onerror = (err) => {
+    console.warn("SSE connection error", err);
+    if (onError) onError(err);
+    es.close();
+  };
+
+  return es;
+};
+
+// -------------------------
+// SEO APIs (Unchanged)
+// -------------------------
+export const analyzeURL = async (url: string) => {
+  try {
+    const res = await axios.post(
+      `${API_BASE}/api/analyze`,
+      { url },
+      { headers: getAuthHeader() },
+    );
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+export const analyzeKeyword = async (keyword: string) => {
+  try {
+    const res = await axios.post(
+      `${API_BASE}/api/keyword`,
+      { keyword },
+      { headers: getAuthHeader() },
+    );
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+// -------------------------
+// ✨ UPDATED AI API CALL (GEMINI)
+// -------------------------
+export const askAiForReport = async (query: string, context: any) => {
+  try {
+    // NOTE: Changed endpoint to /api/ask_ai
+    const res = await axios.post(
+      `${API_BASE}/api/ask_ai`,
+      { query, context },
+      // CRITICAL: We assume the backend handles authentication internally.
+      // We pass the header for premium users, but the backend must tolerate anonymous calls.
+      { headers: getAuthHeader() },
+    );
+    return res.data;
+  } catch (error: any) {
+    // Return error structure for the frontend modal to display
+    return {
+      error:
+        error.response?.data?.detail ||
+        "AI Request Failed (Network Error). Check Server Logs.",
+    };
   }
 };

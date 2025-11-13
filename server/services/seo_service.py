@@ -1,173 +1,281 @@
+# Removed: import openai
+import asyncio
+import os
+from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
-import os
 from dotenv import load_dotenv
+from google import genai  # ✨ NEW: Import Google GenAI library
+from google.genai import types  # ✨ NEW: Import Types
+from playwright.async_api import async_playwright
 
-# Load .env
+# Load .env variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_PAGESPEED_API_KEY")
+# Using the key specific to the Gemini API
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# -------------------- Keyword Analysis (still dummy) --------------------
+# Initialize Gemini client
+# The client automatically reads the GEMINI_API_KEY environment variable.
+gemini_client = genai.Client()
+
+
+# -------------------------------------------------
+# Keyword Analysis (Dummy - Unchanged)
+# -------------------------------------------------
 def analyze_keyword(keyword: str):
-    """
-    Dummy keyword analysis (placeholder).
-    Extend later with Google Trends or 3rd party keyword APIs.
-    """
     return {
         "keyword": keyword,
         "search_volume": 1200,
         "competition": 0.75,
-        "related_keywords": [f"{keyword} example", f"{keyword} tutorial"]
+        "related_keywords": [f"{keyword} example", f"{keyword} tutorial"],
     }
 
 
-# -------------------- Google PageSpeed Insights --------------------
+# -------------------------------------------------
+# Google PageSpeed Insights (Unchanged)
+# -------------------------------------------------
 def get_pagespeed_insights(url: str, strategy: str = "desktop"):
-    """
-    Get real SEO & performance scores from Google PageSpeed Insights API.
-    strategy = "mobile" or "desktop"
-    """
     endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-    params = {
-        "url": url,
-        "strategy": strategy,
-        "key": GOOGLE_API_KEY
-    }
+    params = {"url": url, "strategy": strategy, "key": GOOGLE_API_KEY}
     try:
         res = requests.get(endpoint, params=params, timeout=15)
         data = res.json()
-
         lighthouse = data.get("lighthouseResult", {}).get("categories", {})
         return {
             "seo_score": int(lighthouse.get("seo", {}).get("score", 0) * 100),
-            "performance_score": int(lighthouse.get("performance", {}).get("score", 0) * 100),
-            "best_practices": int(lighthouse.get("best-practices", {}).get("score", 0) * 100),
-            "accessibility": int(lighthouse.get("accessibility", {}).get("score", 0) * 100),
+            "performance_score": int(
+                lighthouse.get("performance", {}).get("score", 0) * 100
+            ),
+            "best_practices": int(
+                lighthouse.get("best-practices", {}).get("score", 0) * 100
+            ),
+            "accessibility": int(
+                lighthouse.get("accessibility", {}).get("score", 0) * 100
+            ),
         }
-
     except Exception as e:
         return {"error": str(e)}
 
 
-# -------------------- URL Analysis --------------------
-def analyze_url(url: str):
-    """
-    Perform SEO analysis of a given URL.
-    Combines metadata, headings, links, images, content stats + Google PSI scores.
-    """
+# -------------------------------------------------
+# URL SEO Analysis (Original Content)
+# -------------------------------------------------
+async def analyze_url(url: str):
+    # ✅ Normalize URL
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/127.0.0.1 Safari/537.36"
+        )
+    }
+
+    html = None
+    response_headers = {}
+
     try:
-        res = requests.get(url, timeout=10)
-        load_time = res.elapsed.total_seconds() * 1000  # ms
-        page_size = len(res.content) / 1024  # KB
-
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        # --- Metadata ---
-        title = soup.title.string.strip() if soup.title else "No Title"
-        description_tag = soup.find("meta", attrs={"name": "description"})
-        description = description_tag["content"].strip() if description_tag and description_tag.get("content") else ""
-
-        keywords = []
-        meta_kw = soup.find("meta", attrs={"name": "keywords"})
-        if meta_kw and meta_kw.get("content"):
-            keywords = [kw.strip() for kw in meta_kw["content"].split(",") if kw]
-
-        # --- Headings ---
-        h1_tags = [h.get_text(strip=True) for h in soup.find_all("h1")]
-        h2_tags = [h.get_text(strip=True) for h in soup.find_all("h2")]
-        h3_tags = [h.get_text(strip=True) for h in soup.find_all("h3")]
-
-        # --- Links ---
-        all_links = [a["href"] for a in soup.find_all("a", href=True)]
-        internal_links, external_links, broken_links = [], [], []
-        parsed_url = urlparse(url)
-
-        for link in all_links[:20]:  # limit for speed
-            abs_url = urljoin(url, link)
-            if urlparse(abs_url).netloc == parsed_url.netloc:
-                internal_links.append(abs_url)
-            else:
-                external_links.append(abs_url)
-            try:
-                link_res = requests.head(abs_url, timeout=3)
-                if link_res.status_code >= 400:
-                    broken_links.append(abs_url)
-            except Exception:
-                broken_links.append(abs_url)
-
-        # --- Images ---
-        images = soup.find_all("img")
-        image_count = len(images)
-        images_without_alt = [img.get("src") for img in images if not img.get("alt")]
-
-        # --- Canonical ---
-        canonical = None
-        canon_tag = soup.find("link", attrs={"rel": "canonical"})
-        if canon_tag and canon_tag.get("href"):
-            canonical = canon_tag["href"]
-
-        # --- Robots ---
-        robots_meta = soup.find("meta", attrs={"name": "robots"})
-        robots_content = robots_meta["content"].lower() if robots_meta and robots_meta.get("content") else ""
-
-        # --- Open Graph ---
-        og_tags = {tag.get("property"): tag.get("content") for tag in soup.find_all("meta") if tag.get("property", "").startswith("og:")}
-
-        # --- Structured data ---
-        structured_data = [script.get_text() for script in soup.find_all("script", attrs={"type": "application/ld+json"})]
-
-        # --- Content ---
-        word_count = len(soup.get_text().split())
-
-        # --- Performance (basic request data) ---
-        performance_data = {
-            "page_size_kb": round(page_size, 2),
-            "load_time_ms": int(load_time),
-            "https": url.startswith("https"),
-        }
-
-        # --- Real Google PSI Scores ---
-        google_scores = get_pagespeed_insights(url, "desktop")
-
-        return {
-            "title": title,
-            "metaTags": {
-                "description": description,
-                "keywords": ",".join(keywords),
-                "robots": robots_content,
-                "canonical": canonical,
-                "og_tags": og_tags,
-            },
-            "headings": {
-                "h1": h1_tags,
-                "h2": h2_tags,
-                "h3": h3_tags,
-            },
-            "content": {
-                "word_count": word_count,
-                "image_count": image_count,
-                "images_without_alt": images_without_alt,
-            },
-            "links": {
-                "internal": internal_links,
-                "external": external_links,
-                "broken": broken_links,
-            },
-            "performance": performance_data,
-            "structured_data": structured_data,
-            "google_scores": google_scores  # ✅ Real SEO & Performance scores
-        }
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+            page = await browser.new_page()
+            await page.set_extra_http_headers(headers)
+            await page.goto(url, timeout=30000, wait_until="domcontentloaded")
+            html = await page.content()
+            if page.response:
+                response_headers = page.response.headers
+            await browser.close()
 
     except Exception as e:
-        return {
-            "title": "Error fetching URL",
-            "metaTags": {},
-            "headings": {},
-            "content": {},
-            "links": {},
-            "performance": {},
-            "structured_data": [],
-            "google_scores": {},
-            "error": str(e),
-        }
+        print(f"⚠️ Playwright failed: {e}")
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            res.raise_for_status()
+            html = res.text
+            response_headers = res.headers
+        except Exception as e2:
+            print(f"❌ Both Playwright and requests failed: {e2}")
+            return {
+                "title": "Error fetching URL",
+                "metaTags": {},
+                "headings": {},
+                "content": {},
+                "links": {
+                    "internal": [],
+                    "external": [],
+                    "broken": [],
+                    "nofollow": [],
+                    "mailto": [],
+                    "tel": [],
+                },
+                "structured_data": [],
+                "google_scores": {},
+                "score": 0,
+                "keywords": [],
+                "error": str(e2),
+            }
+
+    soup = BeautifulSoup(html, "html.parser")
+    title = soup.title.string.strip() if soup.title else "No Title"
+    meta_desc = soup.find("meta", attrs={"name": "description"})
+    description = (
+        meta_desc.get("content").strip()
+        if meta_desc and meta_desc.get("content")
+        else None
+    )
+    meta_kw = soup.find("meta", attrs={"name": "keywords"})
+    keywords = (
+        [kw.strip() for kw in meta_kw.get("content", "").split(",") if kw]
+        if meta_kw
+        else []
+    )
+    canonical_tag = soup.find("link", rel="canonical")
+    canonical = canonical_tag.get("href") if canonical_tag else None
+    robots_tag = soup.find("meta", attrs={"name": "robots"})
+    robots_content = (
+        robots_tag.get("content").lower()
+        if robots_tag and robots_tag.get("content")
+        else None
+    )
+    favicon_tag = soup.find("link", rel="icon")
+    favicon = (
+        urljoin(url, favicon_tag.get("href"))
+        if favicon_tag and favicon_tag.get("href")
+        else None
+    )
+    headings = {
+        f"h{i}": [h.get_text(strip=True) for h in soup.find_all(f"h{i}")]
+        for i in range(1, 7)
+    }
+    all_text = soup.get_text()
+    word_count = len(all_text.split())
+    paragraph_count = len(soup.find_all("p"))
+    image_tags = soup.find_all("img")
+    image_count = len(image_tags)
+    images_without_alt = [img.get("src") for img in image_tags if not img.get("alt")]
+    images_missing_dimensions = [
+        img.get("src")
+        for img in image_tags
+        if not img.get("width") or not img.get("height")
+    ]
+    images_long_names = [
+        img.get("src")
+        for img in image_tags
+        if img.get("src") and len(img.get("src")) > 50
+    ]
+    all_links = [a.get("href") for a in soup.find_all("a", href=True)]
+    parsed_url = urlparse(url)
+    internal, external, nofollow, mailto, tel = [], [], [], [], []
+
+    for a_tag in soup.find_all("a", href=True):
+        link = a_tag["href"]
+        abs_url = urljoin(url, link)
+
+        if abs_url.startswith("mailto:"):
+            mailto.append(abs_url)
+        elif abs_url.startswith("tel:"):
+            tel.append(abs_url)
+        elif parsed_url.netloc in abs_url:
+            internal.append(abs_url)
+        else:
+            external.append(abs_url)
+
+        if a_tag.get("rel") and "nofollow" in a_tag.get("rel"):
+            nofollow.append(abs_url)
+
+    structured_data = [
+        script.get_text()
+        for script in soup.find_all("script", attrs={"type": "application/ld+json"})
+    ]
+
+    page_size = len(html.encode("utf-8")) / 1024
+    performance_data = {
+        "page_size_kb": round(page_size, 2),
+        "https": url.startswith("https"),
+        "gzip_enabled": response_headers.get("content-encoding") == "gzip",
+        "cache_control": response_headers.get("cache-control"),
+        "expires": response_headers.get("expires"),
+    }
+
+    google_scores = get_pagespeed_insights(url, "desktop")
+    score = 80 if description and len(description) > 50 else 50
+
+    return {
+        "title": title,
+        "metaTags": {
+            "description": description,
+            "keywords": ", ".join(keywords) if keywords else None,
+            "robots": robots_content,
+            "canonical": canonical,
+            "favicon": favicon,
+        },
+        "headings": headings,
+        "content": {
+            "word_count": word_count,
+            "paragraph_count": paragraph_count,
+            "image_count": image_count,
+            "images_without_alt": images_without_alt,
+            "images_missing_dimensions": images_missing_dimensions,
+            "images_long_names": images_long_names,
+        },
+        "links": {
+            "internal": list(set(internal)),
+            "external": list(set(external)),
+            "broken": [],
+            "nofollow": list(set(nofollow)),
+            "mailto": list(set(mailto)),
+            "tel": list(set(tel)),
+        },
+        "performance": performance_data,
+        "structured_data": structured_data,
+        "google_scores": google_scores,
+        "score": score,
+        "keywords": keywords,
+        "error": None,
+    }
+
+
+# -------------------------------------------------
+# ✨ NEW: AI Analysis Service (Using Gemini)
+# -------------------------------------------------
+async def ask_ai_for_report(query: str, context: dict):
+    """Generates an SEO response using Google Gemini based on user query and site context."""
+    if not GEMINI_API_KEY:
+        return {"error": "Gemini API Key is not configured on the backend."}
+
+    site_info = (
+        f"The current site is {context.get('url')} with a latest SEO score of {context.get('latestScore')}/100. "
+        f"Current issues include: {context.get('issues') or 'None listed'}. "
+        f"Top recommendations are: {context.get('recommendations') or 'None listed'}."
+    )
+
+    system_instruction = (
+        "You are SEOtron, a helpful, expert SEO analyst. Your task is to provide concise, "
+        "actionable, and professional advice based on the user's question and the provided site context. "
+        "Format your answer clearly using markdown (lists, bolding, headings)."
+    )
+
+    try:
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",  # Fast, cost-effective, and powerful model
+            contents=[
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(
+                            f"SYSTEM INSTRUCTION: {system_instruction}\n\nSITE CONTEXT: {site_info}\n\nUSER QUESTION: {query}"
+                        )
+                    ],
+                )
+            ],
+            config=types.GenerateContentConfig(
+                temperature=0.4,
+            ),
+        )
+
+        return {"generated_text": response.text, "error": None}
+    except Exception as e:
+        return {"error": f"Gemini API Error: {str(e)}"}

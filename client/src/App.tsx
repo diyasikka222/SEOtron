@@ -1,6 +1,7 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+// FIX: Importing all components using named imports for consistency
 import { About } from "./components/About";
 import { Cta } from "./components/Cta";
 import { FAQ } from "./components/FAQ";
@@ -18,52 +19,89 @@ import { Testimonials } from "./components/Testimonials";
 import { Signup } from "./components/Signup";
 import { BookDemo } from "./components/DemoPage";
 import { SEOAnalyzer } from "./components/SEOanalyzer";
-import { Login } from "./components/Login"; // ✅ Import Login page
-import { ProtectedRoute } from "./components/ProtectedRoute"; // ✅ Import ProtectedRoute
+import { Login } from "./components/Login";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Onboarding from "./components/Onboarding";
+
+// ✨ CRITICAL FIX: Changing the import from default (DashboardDeep) to named { DashboardDeep }
+import { DashboardDeep } from "./components/Dashboard";
+import { Profile } from "./components/Profile";
 
 import "./App.css";
 
+interface Props {
+  children: React.ReactNode;
+}
+
+export const PublicRoute: React.FC<Props> = ({ children }) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    return <Navigate to="/deepdashboard" />;
+  }
+  return <>{children}</>;
+};
+
 function App() {
+  const { pathname } = useLocation();
+  const showNavbar = pathname === "/";
+
   return (
     <>
-      <Navbar />
+      {showNavbar && <Navbar />}
 
       <Routes>
-        {/* Home route */}
+        {/* Landing Page - PublicRoute wraps it */}
         <Route
           path="/"
           element={
-            <>
-              <Hero />
-              <About />
-              <HowItWorks />
-              <Features />
-              <Services />
-              <Cta />
-              <Testimonials />
-              <Team />
-              <Pricing />
-              <Newsletter />
-              <FAQ />
-              <Footer />
-              <ScrollToTop />
-            </>
+            <PublicRoute>
+              <>
+                <Hero />
+                <About />
+                <HowItWorks />
+                <Features />
+                <Services />
+                <Cta />
+                <Testimonials />
+                <Team />
+                <Pricing />
+                <Newsletter />
+                <FAQ />
+                <Footer />
+                <ScrollToTop />
+              </>
+            </PublicRoute>
           }
         />
 
-        {/* Auth routes */}
+        {/* ✅ Onboarding Route (Public) */}
+        <Route path="/onboarding" element={<Onboarding />} />
+
+        {/* Auth Routes */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
 
-        {/* Other pages */}
+        {/* Other Public Pages */}
         <Route path="/book-demo" element={<BookDemo />} />
 
-        {/* ✅ Protected SEO Analyzer page */}
+        {/* ✅ Protected Pages */}
+        <Route path="/analyze" element={<SEOAnalyzer />} />
         <Route
-          path="/analyze"
+          path="/deepdashboard"
           element={
             <ProtectedRoute>
-              <SEOAnalyzer />
+              <DashboardDeep />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Profile Route (Protected) */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />
