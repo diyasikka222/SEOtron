@@ -44,12 +44,9 @@ export const signupUser = async (data: {
 
 export const loginUser = async (data: { email: string; password: string }) => {
   try {
-    // This is different from the previous OAuth2 logic, it sends JSON.
-    // We assume your /users/login endpoint expects JSON.
     const res = await axios.post(`${API_BASE}/users/login`, data);
-    // The API file itself saves the token
     localStorage.setItem("token", res.data.access_token);
-    return res.data; // This will return { access_token, isOnboarded, ... }
+    return res.data;
   } catch (error) {
     handleApiError(error);
   }
@@ -61,6 +58,23 @@ export const getCurrentUser = async () => {
       headers: getAuthHeader(),
     });
     return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+// ✨ --- NEW FUNCTION --- ✨
+// This function sends the onboarding data to the backend.
+// We assume a POST endpoint at /users/me/onboard
+// -------------------------
+export const saveOnboardingData = async (onboardingData: any) => {
+  try {
+    const res = await axios.post(
+      `${API_BASE}/users/me/onboard`,
+      onboardingData,
+      { headers: getAuthHeader() },
+    );
+    return res.data; // Returns success message or updated user
   } catch (error) {
     handleApiError(error);
   }

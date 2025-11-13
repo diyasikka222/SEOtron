@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { X, Zap, ArrowRight, CheckCircle } from "lucide-react";
 import { useLocation } from "react-router-dom";
+// ✨ FIX: Path changed to be relative to the components folder
 import Aurora from "./Aurora";
-// ShapeBlur import removed
+// ✨ 1. Import the new API function
+// ✨ FIX: Path changed to go up one level
+import { saveOnboardingData } from "../api";
 
 // design tokens
 const PRIMARY_COLOR = "#9333EA";
@@ -73,8 +76,10 @@ export default function Onboarding() {
   const [msg, setMsg] = useState("Initializing setup...");
   const [loadingFinal, setLoadingFinal] = useState(false);
 
-  // ✨ 1. Snackbar state removed, Error state added
   const [inputError, setInputError] = useState("");
+
+  // ✨ 2. Add state for API errors during finalization
+  const [apiError, setApiError] = useState("");
 
   // user-provided data
   const [website, setWebsite] = useState("");
@@ -112,8 +117,6 @@ export default function Onboarding() {
   }, [website, pages, keywords, description, goals, competitors]);
 
   useEffect(() => persist(), [persist]);
-
-  // ✨ 2. Snackbar useEffect removed
 
   // progress simple derived
   const progressPercent = Math.round(((step + 1) / totalSteps) * 100);
@@ -215,40 +218,43 @@ export default function Onboarding() {
     setCompetitorInput("");
   };
 
-  // finalize & show final loading
-  const finalize = () => {
-    // persist again (already auto-saved) and show final loading UI
+  // ✨ 3. MODIFIED finalize function to be async and call API
+  const finalize = async () => {
     setLoadingFinal(true);
-    setMsg("We’re setting things up for you — this may take a moment...");
+    setApiError(""); // Clear previous errors
+    setMsg("Saving your setup...");
 
-    // small animation then redirect
-    setTimeout(() => {
-      const payload = {
-        website,
-        pages,
-        keywords,
-        description,
-        goals,
-        competitors,
-        createdAt: new Date().toISOString(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    const payload = {
+      website,
+      pages,
+      keywords,
+      description,
+      goals,
+      competitors,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      // ✨ 4. Call the new API function
+      await saveOnboardingData(payload);
+
+      // If API call is successful:
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); // Save final state
       setMsg("Finalizing...");
-    }, 800);
 
-    setTimeout(() => {
-      setLoadingFinal(false);
-      navigate("/deepdashboard", {
-        state: {
-          website,
-          pages,
-          keywords,
-          description,
-          goals,
-          competitors,
-        },
-      });
-    }, 2300);
+      // small animation then redirect
+      setTimeout(() => {
+        setLoadingFinal(false);
+        navigate("/deepdashboard", {
+          state: { ...payload }, // Pass data to dashboard
+        });
+      }, 1500); // Shortened delay as API call is the main "wait"
+    } catch (err: any) {
+      // ✨ 5. Handle errors if the API call fails
+      console.error("Failed to save onboarding data:", err);
+      setApiError(err.message || "Failed to save setup. Please try again.");
+      setLoadingFinal(false); // Stop loading
+    }
   };
 
   // small step content builder
@@ -323,10 +329,8 @@ export default function Onboarding() {
         }}
       />
 
-      {/* ✨ 3. Snackbar JSX removed */}
-
       {/* foreground card */}
-      <div // ✨ 4. Reverted to a regular div
+      <div
         style={{
           position: "relative",
           zIndex: 2,
@@ -337,8 +341,6 @@ export default function Onboarding() {
           ...glass(0.04, "24px", 0.08),
         }}
       >
-        {/* ✨ 5. Hover effect and wrapper div removed */}
-
         {/* segmented progress on top */}
         <div style={{ position: "relative", marginBottom: 18 }}>
           <div style={{ position: "absolute", left: 20, top: -18 }}>
@@ -380,7 +382,7 @@ export default function Onboarding() {
           <button
             onClick={() => {
               localStorage.removeItem(STORAGE_KEY);
-              navigate("/dashboard");
+              navigate("/deepdashboard"); // Changed from /dashboard
             }}
             style={{
               ...glass(0.06, "10px", 0.06),
@@ -465,7 +467,6 @@ export default function Onboarding() {
                   <input
                     value={website}
                     onChange={(e) => {
-                      // ✨ 6. ADDED logic to clear error
                       setWebsite(e.target.value);
                       setInputError("");
                     }}
@@ -483,12 +484,11 @@ export default function Onboarding() {
                   />
                   <button
                     onClick={() => {
-                      // ✨ 7. UPDATED button logic
                       if (website.trim()) {
-                        setInputError(""); // Clear error
+                        setInputError("");
                         startScan();
                       } else {
-                        setInputError("Please enter a website URL first!"); // Set error
+                        setInputError("Please enter a website URL first!");
                       }
                     }}
                     style={{
@@ -506,7 +506,6 @@ export default function Onboarding() {
                   </button>
                 </div>
 
-                {/* ✨ 8. ADDED Error Message Display */}
                 <p
                   style={{
                     color: "#FF3232",
@@ -1055,6 +1054,7 @@ export default function Onboarding() {
                   <div style={{ marginTop: 22 }}>
                     <button
                       onClick={finalize}
+                      disabled={loadingFinal} // ✨ 6. Disable button while loading
                       style={{
                         background: `linear-gradient(90deg, ${PRIMARY_COLOR}, #00c2ff)`,
                         color: "#fff",
@@ -1063,11 +1063,25 @@ export default function Onboarding() {
                         border: "none",
                         cursor: "pointer",
                         fontWeight: 700,
+                        opacity: loadingFinal ? 0.7 : 1, // ✨ 6. Visual feedback
                       }}
                     >
-                      Finalize Setup
+                      {loadingFinal ? "Saving..." : "Finalize Setup"}
                     </button>
                   </div>
+
+                  {/* ✨ 7. Show API error if it fails */}
+                  <p
+                    style={{
+                      color: "#FF3232",
+                      fontSize: 14,
+                      marginTop: 10,
+                      height: "16px",
+                      lineHeight: "16px",
+                    }}
+                  >
+                    {apiError}
+                  </p>
                 </div>
               </motion.div>
             )}
