@@ -8,17 +8,25 @@ export const Hero = () => {
   const getStartedLink = isLoggedIn ? "/onboarding" : "/signup";
 
   return (
-    // 1. MODIFIED SECTION:
-    // - REMOVED 'container', 'grid', 'lg:grid-cols-2', 'place-items-center', 'gap-10', 'px-1'
-    // - ADDED 'w-full'
-    <section className="relative w-full py-20 md:py-32 overflow-hidden h-200">
+    // ✨ 1. MODIFIED SECTION:
+    // - Changed `w-50` to `w-full`
+    // - Changed `h-full` to `min-h-screen`
+    <section
+      className="relative w-full min-h-screen py-20 md:py-32"
+      style={{
+        maskImage:
+          "radial-gradient(ellipse at center, black 60%, transparent 90%)",
+        WebkitMaskImage:
+          "radial-gradient(ellipse at center, black 60%, transparent 90%)", // For Safari/WebKit
+      }}
+    >
       {/* 2. BACKGROUND: This is correct, it now fills the full-width section */}
       <GridScan
-        className="absolute inset-0 -z-10"
-        sensitivity={0.55}
-        lineThickness={2}
+        className="absolute inset-1 -z-10 py-20"
+        sensitivity={0.1}
+        lineThickness={0.1}
         linesColor="#392e4e"
-        gridScale={0.1}
+        gridScale={0.03}
         scanColor="#00000"
         scanOpacity={0.03}
         enablePost
@@ -31,7 +39,7 @@ export const Hero = () => {
       // - This div now holds the 'container' and 'grid' layout,
       //   centering your content ON TOP of the full-width background.
       */}
-      <div className="container grid lg:grid-cols-2 place-items-center gap-10 px-1">
+      <div className="container grid lg:grid-cols-2 place-items-center gap-8 px-1">
         {/* 4. CONTENT (Unchanged, just nested) */}
         <div className="text-center lg:text-start space-y-6">
           <main className="text-5xl md:text-6xl font-bold">

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { Calendar } from "./ui/calendar"; 
+import { Calendar } from "./ui/calendar";
 import { Input } from "./ui/input";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
+import DotGrid from "./DotGrid";
 
 export const BookDemo = () => {
   const [date, setDate] = useState<Date | undefined>();
@@ -36,9 +37,38 @@ export const BookDemo = () => {
   };
 
   return (
-    <section className="container flex items-center justify-center min-h-screen py-20">
-      <Card className="w-full max-w-lg p-6 shadow-xl rounded-2xl bg-black/80 backdrop-blur border border-white/10">
-        <CardHeader className="text-center">
+    // ✨ 1. MODIFIED: Added `flex flex-col`
+    <section className="relative w-full flex flex-col items-center justify-center min-h-screen py-20 overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <DotGrid
+          dotSize={3}
+          gap={15}
+          baseColor="#303030"
+          activeColor="#61DAFB"
+          proximity={120}
+          shockRadius={250}
+          shockStrength={5}
+          resistance={750}
+          returnDuration={1.5}
+        />
+      </div>
+
+      {/* ✨ 2. ADDED: SEOtron Title */}
+      <h1 className="relative z-10 text-6xl font-extrabold mb-12 bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] bg-clip-text text-transparent">
+        SEOtron
+      </h1>
+
+      <Card className="relative z-10 w-full max-w-lg p-6 shadow-xl rounded-2xl bg-black/80 backdrop-blur border border-white/10">
+        <CardHeader className="relative text-center">
+          <Link to="/" className="absolute top-0 left-0">
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-white/10 hover:text-white"
+            >
+              &larr; Go Home
+            </Button>
+          </Link>
+
           <CardTitle className="text-2xl font-bold">
             <span className="bg-gradient-to-r from-[#F596D3] to-[#D247BF] text-transparent bg-clip-text">
               Book a Free Demo
@@ -46,7 +76,8 @@ export const BookDemo = () => {
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
             {step === "select" && "Select your preferred date & time slot 📅"}
-            {step === "email" && "Provide your email to receive Google Meet link ✉️"}
+            {step === "email" &&
+              "Provide your email to receive Google Meet link ✉️"}
             {step === "done" && "🎉 Booking Confirmed"}
           </p>
         </CardHeader>
@@ -130,9 +161,7 @@ export const BookDemo = () => {
               </p>
               <br />
               <Link to="/">
-              <Button>
-                Go to Home Page
-              </Button>
+                <Button>Go to Home Page</Button>
               </Link>
             </div>
           )}

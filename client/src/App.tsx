@@ -21,31 +21,28 @@ import { SEOAnalyzer } from "./components/SEOanalyzer";
 import { Login } from "./components/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
-import Onboarding from "./components/Onboarding"; // ✅ NEW IMPORT
+import Onboarding from "./components/Onboarding";
 
 import "./App.css";
 import DashboardDeep from "./components/Dashboard";
 
-// ✅ PublicRoute component
 interface Props {
   children: React.ReactNode;
 }
 
 export const PublicRoute: React.FC<Props> = ({ children }) => {
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
+  // ✨ FIX: Check for "token" instead of "user"
+  const token = localStorage.getItem("token");
 
-  if (user) {
-    return <Navigate to="/analyze" />;
+  if (token) {
+    // This will now correctly redirect if a token exists
+    return <Navigate to="/deepdashboard" />;
   }
   return <>{children}</>;
 };
 
 function App() {
-  // useLocation must run inside a Router — this assumes BrowserRouter is mounted above App (index.tsx)
   const { pathname } = useLocation();
-
-  // Show Navbar only on the landing page "/" (the fragment with Hero, About, etc.)
   const showNavbar = pathname === "/";
 
   return (

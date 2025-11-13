@@ -1,4 +1,3 @@
-// DashboardDeep.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
@@ -26,12 +25,12 @@ import { useLocation, useNavigate } from "react-router-dom";
  * SEOtron — Deep Dashboard (enhanced with Plans, Scheduler, Actions, Logout)
  *
  * Added features:
- *  - Plans modal (Free / Premium / Enterprise) — choosing plan toggles Pro flags
- *  - Account-level Pro (isProUser) and per-site proEnabled flag
- *  - Scheduler that auto-runs scans while page is open (daily/weekly/monthly)
- *  - Actions modal for bulk operations (rescan all, export all, clear all)
- *  - Logout button (clears localStorage "user" and navigates to /login)
- *  - Pro features panel shows unlocked/locked states
+ * - Plans modal (Free / Premium / Enterprise) — choosing plan toggles Pro flags
+ * - Account-level Pro (isProUser) and per-site proEnabled flag
+ * - Scheduler that auto-runs scans while page is open (daily/weekly/monthly)
+ * - Actions modal for bulk operations (rescan all, export all, clear all)
+ * - Logout button (clears localStorage "user" and navigates to /login)
+ * - Pro features panel shows unlocked/locked states
  *
  * Replace your existing DashboardDeep.tsx with this file.
  */
@@ -1310,7 +1309,8 @@ export default function DashboardDeep() {
   // -------------------- Logout --------------------
   const logout = () => {
     if (!confirm("Log out?")) return;
-    localStorage.removeItem("user");
+    // ✨ FIX: Changed "user" to "token" to match your App.tsx
+    localStorage.removeItem("token");
     localStorage.removeItem("account_is_pro");
     setIsProUser(false);
     navigate("/login");
@@ -1481,7 +1481,7 @@ export default function DashboardDeep() {
               ))}
               <div style={{ width: 8 }} />
               <div style={{ fontSize: 12, opacity: 0.7 }}>
-                Click a tab to show full site panel above the list
+                Click a site tab to view its expanded panel above the list
               </div>
             </div>
 

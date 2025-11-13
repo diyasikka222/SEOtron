@@ -1,9 +1,30 @@
+// Component inspired by github.com/zavalit/bayer-dithering-webgl-demo
+import PixelBlast from "./PixelBlast"; // ✨ 1. IMPORTED
 import React, { useMemo, useState } from "react";
 import { analyzeURL } from "../api";
 import { useNavigate } from "react-router-dom";
 
 type Rec = { title: string; detail: string };
 type CheckItem = { id: string; label: string; score?: number; hint?: string };
+
+// ✨ 2. ADDED LockIcon component for the teaser card
+const LockIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="28"
+    height="28"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ color: "#B19EEF" }}
+  >
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
 
 export const SEOAnalyzer = () => {
   const [url, setURL] = useState("");
@@ -430,7 +451,7 @@ Score: ${data.score || "N/A"}
           style={{
             flex: 1,
             textAlign: "center",
-            fontSize: "1.75rem", // Slightly bigger
+            fontSize: "2.5rem", // Slightly bigger
             fontWeight: 800,
             color: "#fff", // Plain white text
           }}
@@ -452,9 +473,46 @@ Score: ${data.score || "N/A"}
           margin: "0 auto",
         }}
       >
+        {/* ✨ 3. MOVED PixelBlast to be the background of the *content container* */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0, // Background layer
+            // Opacity persists but is more subtle on results page
+            opacity: isHeroLayout ? 0.4 : 0.2,
+            transition: "opacity 0.6s ease-in-out",
+          }}
+        >
+          <PixelBlast
+            variant="circle"
+            pixelSize={6}
+            color="#B19EEF"
+            patternScale={3}
+            patternDensity={1.2}
+            pixelSizeJitter={0.5}
+            enableRipples
+            rippleSpeed={0.1}
+            rippleThickness={0.8}
+            rippleIntensityScale={0.5}
+            liquid
+            liquidStrength={0.1}
+            liquidRadius={0.2}
+            liquidWobbleSpeed={5}
+            speed={0.1}
+            edgeFade={0.25}
+            transparent
+          />
+        </div>
+
         {/* SearchWrapper: Animation handler */}
         <div
           style={{
+            // ✨ 4. Content (SearchWrapper) is z-10 to be ON TOP of PixelBlast
+            position: "relative",
+            zIndex: 1,
+            // REMOVED overflow: hidden
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -468,9 +526,13 @@ Score: ${data.score || "N/A"}
               "min-height 0.6s ease-in-out, justify-content 0.6s ease-in-out",
           }}
         >
+          {/* ✨ PixelBlast component was MOVED from here */}
+
           {/* Hero Title - animated */}
           <h2
             style={{
+              position: "relative",
+              zIndex: 1,
               fontSize: "2.5rem",
               fontWeight: 800,
               background: "linear-gradient(135deg, #ffffff, #b0b0b0)",
@@ -493,6 +555,8 @@ Score: ${data.score || "N/A"}
           {/* Top controls */}
           <div
             style={{
+              position: "relative",
+              zIndex: 1,
               display: "flex",
               alignItems: "center",
               gap: 12,
@@ -501,7 +565,7 @@ Score: ${data.score || "N/A"}
               maxWidth: "1400px",
               justifyContent: "center",
               transition: "width 0.6s ease-in-out",
-              paddingBottom: "100px",
+              paddingBottom: "40px", // ✨ Restored some padding
             }}
           >
             <input
@@ -512,10 +576,10 @@ Score: ${data.score || "N/A"}
               style={{
                 flex: "1 1 480px",
                 minWidth: 280,
-                padding: "12px 16px",
+                padding: "10px 16px",
                 borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(0,0,0,0.35)",
+                background: "rgba(1,1,1,1)",
                 color: "var(--text-color)",
                 outline: "none",
               }}
@@ -540,247 +604,314 @@ Score: ${data.score || "N/A"}
           </div>
         )}
 
-        {/* Results Container */}
-        {!loading && result && (
-          <div className="results-container">
-            {/* Typewriter result */}
-            {displayedText && (
-              <div
-                style={{
-                  marginTop: 18,
-                  background: "rgba(0,0,0,0.35)",
-                  padding: 20,
-                  borderRadius: 16,
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                {displayedText}
-                {isTyping && <span className="cursor">▋</span>}
-              </div>
-            )}
-
-            {/* SCORE + SUMMARY */}
-            {!isTyping && (
-              <div
-                style={{
-                  marginTop: 24,
-                  display: "grid",
-                  gridTemplateColumns: "minmax(280px, 420px) 1fr",
-                  gap: 20,
-                  alignItems: "stretch",
-                }}
-              >
+        {/* ✨ 5. WRAPPED results in a z-10 div to stay on top of background */}
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {!loading && result && (
+            <div className="results-container">
+              {/* Typewriter result */}
+              {displayedText && (
                 <div
                   style={{
-                    borderRadius: 18,
-                    padding: 18,
-                    background:
-                      "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.06))",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    backdropFilter: "blur(10px)",
+                    marginTop: 18,
+                    background: "rgba(0,0,0,0.35)",
+                    padding: 20,
+                    borderRadius: 16,
+                    whiteSpace: "pre-wrap",
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    border: "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  <div
-                    style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}
-                  >
-                    SEO Score
-                  </div>
-                  <Gauge value={scoreNumber} />
+                  {displayedText}
+                  {isTyping && <span className="cursor">▋</span>}
+                </div>
+              )}
+
+              {/* SCORE + SUMMARY */}
+              {!isTyping && (
+                <div
+                  style={{
+                    marginTop: 24,
+                    display: "grid",
+                    gridTemplateColumns: "minmax(280px, 420px) 1fr",
+                    gap: 20,
+                    alignItems: "stretch",
+                  }}
+                >
                   <div
                     style={{
-                      fontSize: 14,
-                      marginTop: -8,
-                      color: scoreColor(scoreNumber),
-                      fontWeight: 700,
+                      borderRadius: 18,
+                      padding: 18,
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.06))",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      backdropFilter: "blur(10px)",
                     }}
                   >
-                    {scoreNumber < 40
-                      ? "Poor"
-                      : scoreNumber < 75
-                        ? "Okay"
-                        : "Good"}
+                    <div
+                      style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}
+                    >
+                      SEO Score
+                    </div>
+                    <Gauge value={scoreNumber} />
+                    <div
+                      style={{
+                        fontSize: 14,
+                        marginTop: -8,
+                        color: scoreColor(scoreNumber),
+                        fontWeight: 700,
+                      }}
+                    >
+                      {scoreNumber < 40
+                        ? "Poor"
+                        : scoreNumber < 75
+                          ? "Okay"
+                          : "Good"}
+                    </div>
+                    <div style={{ opacity: 0.85, marginTop: 6 }}>
+                      Scores reflect on-page signals and performance metrics.
+                    </div>
                   </div>
-                  <div style={{ opacity: 0.85, marginTop: 6 }}>
-                    Scores reflect on-page signals and performance metrics.
+
+                  <div
+                    style={{
+                      borderRadius: 18,
+                      padding: 18,
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.06))",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 800,
+                        marginBottom: 12,
+                      }}
+                    >
+                      What we evaluate
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: 12,
+                      }}
+                    >
+                      {factorScores.map((f) => (
+                        <div
+                          key={f.id}
+                          style={{
+                            border: "1px solid rgba(255,255,255,0.10)",
+                            borderRadius: 14,
+                            padding: "12px 14px",
+                            background: "rgba(0,0,0,0.35)",
+                          }}
+                        >
+                          <div style={{ fontSize: 12, opacity: 0.8 }}>
+                            {f.label}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 20,
+                              fontWeight: 800,
+                              color: scoreColor(f.score ?? 0),
+                            }}
+                          >
+                            {f.score}
+                          </div>
+                          {f.hint && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                opacity: 0.7,
+                                marginTop: 4,
+                              }}
+                            >
+                              {f.hint}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              )}
 
+              {/* AI RECOMMENDATIONS - SPOTLIGHT */}
+              {!isTyping && (
                 <div
                   style={{
-                    borderRadius: 18,
-                    padding: 18,
+                    marginTop: 28,
+                    borderRadius: 20,
+                    padding: 22,
                     background:
-                      "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.06))",
+                      "linear-gradient(120deg, rgba(255,255,255,0.06), rgba(255,255,255,0.08))",
                     border: "1px solid rgba(255,255,255,0.10)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
                   <div
-                    style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}
+                    style={{ fontSize: 20, fontWeight: 800, marginBottom: 14 }}
                   >
-                    What we evaluate
+                    AI-Generated Recommendations
                   </div>
                   <div
                     style={{
                       display: "grid",
                       gridTemplateColumns:
-                        "repeat(auto-fit, minmax(180px, 1fr))",
-                      gap: 12,
+                        "repeat(auto-fit, minmax(260px, 1fr))",
+                      gap: 16,
                     }}
                   >
-                    {factorScores.map((f) => (
+                    {/* ✨ 6. Show first 3 recommendations */}
+                    {aiRecommendations.slice(0, 3).map((rec, idx) => (
                       <div
-                        key={f.id}
-                        style={{
-                          border: "1px solid rgba(255,255,255,0.10)",
-                          borderRadius: 14,
-                          padding: "12px 14px",
-                          background: "rgba(0,0,0,0.35)",
-                        }}
+                        key={idx}
+                        className="card-spotlight"
+                        onMouseMove={handleCardMouseMove}
                       >
-                        <div style={{ fontSize: 12, opacity: 0.8 }}>
-                          {f.label}
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            marginBottom: 8,
+                            position: "relative",
+                            zIndex: 2,
+                          }}
+                        >
+                          {rec.title}
                         </div>
                         <div
                           style={{
-                            fontSize: 20,
-                            fontWeight: 800,
-                            color: scoreColor(f.score ?? 0),
+                            opacity: 0.95,
+                            position: "relative",
+                            zIndex: 2,
                           }}
                         >
-                          {f.score}
+                          {rec.detail}
                         </div>
-                        {f.hint && (
-                          <div
-                            style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}
-                          >
-                            {f.hint}
-                          </div>
-                        )}
                       </div>
                     ))}
+
+                    {/* ✨ 7. ADDED Teaser Card */}
+                    <div
+                      className="card-spotlight"
+                      onMouseMove={handleCardMouseMove}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 16,
+                        padding: "24px",
+                        minHeight: 220,
+                        backgroundColor: "rgba(17, 17, 17, 0.7)",
+                        borderColor: "rgba(177, 158, 239, 0.3)",
+                        "--spotlight-color": "rgba(177, 158, 239, 0.15)",
+                      }}
+                    >
+                      <LockIcon />
+                      <h4
+                        style={{
+                          margin: 0,
+                          fontSize: "1.1rem",
+                          fontWeight: 700,
+                          textAlign: "center",
+                        }}
+                      >
+                        Unlock {Math.max(0, aiRecommendations.length - 3)} More
+                        Recommendations
+                      </h4>
+                      <p
+                        style={{
+                          opacity: 0.8,
+                          margin: 0,
+                          fontSize: "0.9rem",
+                          textAlign: "center",
+                          maxWidth: 200,
+                        }}
+                      >
+                        Sign up to get full access to all AI insights.
+                      </p>
+                      <button
+                        onClick={() => navigate("/signup")}
+                        className="analyze-button"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, #B19EEF, #a66cff)", // Purple gradient
+                          width: "100%",
+                        }}
+                      >
+                        Sign Up to Unlock
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* AI RECOMMENDATIONS - SPOTLIGHT */}
-            {!isTyping && (
-              <div
-                style={{
-                  marginTop: 28,
-                  borderRadius: 20,
-                  padding: 22,
-                  background:
-                    "linear-gradient(120deg, rgba(255,255,255,0.06), rgba(255,255,255,0.08))",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  backdropFilter: "blur(10px)",
-                }}
-              >
+              {/* Promotion Card */}
+              {!isTyping && (
                 <div
-                  style={{ fontSize: 20, fontWeight: 800, marginBottom: 14 }}
+                  className="card-spotlight promotion-card"
+                  onMouseMove={handleCardMouseMove}
+                  style={{ marginTop: 28 }}
                 >
-                  AI-Generated Recommendations ({aiRecommendations.length})
+                  <div style={{ position: "relative", zIndex: 2 }}>
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontSize: "1.5rem",
+                        background: "linear-gradient(135deg, #00c2ff, #a66cff)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                      }}
+                    >
+                      Get the Full Power of SEOtron
+                    </h3>
+                    <p style={{ opacity: 0.9, maxWidth: 600 }}>
+                      Sign up for free to save your projects, track score
+                      changes over time, and unlock advanced competitor
+                      insights.
+                    </p>
+                    <button
+                      onClick={() => navigate("/signup")} // Example navigation
+                      className="analyze-button"
+                      style={{
+                        background: "linear-gradient(135deg, #a66cff, #00c2ff)", // Branded gradient
+                      }}
+                    >
+                      Join Now for Free
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              {/* DIAGNOSTICS + CHECKLIST + CONTACT */}
+              {!isTyping && (
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                    gap: 16,
+                    gridTemplateColumns: "1.1fr 0.9fr",
+                    gap: 20,
+                    marginTop: 24,
                   }}
                 >
-                  {aiRecommendations.map((rec, idx) => (
-                    <div
-                      key={idx}
-                      className="card-spotlight"
-                      onMouseMove={handleCardMouseMove}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 800,
-                          marginBottom: 8,
-                          position: "relative",
-                          zIndex: 2,
-                        }}
-                      >
-                        {rec.title}
-                      </div>
-                      <div
-                        style={{
-                          opacity: 0.95,
-                          position: "relative",
-                          zIndex: 2,
-                        }}
-                      >
-                        {rec.detail}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  {/* Left: Diagnostics */}
+                  <div style={{ display: "grid", gap: 16 }}>
+                    {/* ... (Links, Performance, Content & Structure blocks) ... */}
+                  </div>
 
-            {/* Promotion Card */}
-            {!isTyping && (
-              <div
-                className="card-spotlight promotion-card"
-                onMouseMove={handleCardMouseMove}
-                style={{ marginTop: 28 }}
-              >
-                <div style={{ position: "relative", zIndex: 2 }}>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "1.5rem",
-                      background: "linear-gradient(135deg, #00c2ff, #a66cff)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                    }}
-                  >
-                    Get the Full Power of SEOtron
-                  </h3>
-                  <p style={{ opacity: 0.9, maxWidth: 600 }}>
-                    Sign up for free to save your projects, track score changes
-                    over time, and unlock advanced competitor insights.
-                  </p>
-                  <button
-                    onClick={() => navigate("/signup")} // Example navigation
-                    className="analyze-button"
-                    style={{
-                      background: "linear-gradient(135deg, #a66cff, #00c2ff)", // Branded gradient
-                    }}
-                  >
-                    Join Now for Free
-                  </button>
+                  {/* Right: Checklist + Agent */}
+                  <div style={{ display: "grid", gap: 16 }}>
+                    {/* ... (Checklist and Contact blocks) ... */}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* DIAGNOSTICS + CHECKLIST + CONTACT */}
-            {!isTyping && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.1fr 0.9fr",
-                  gap: 20,
-                  marginTop: 24,
-                }}
-              >
-                {/* Left: Diagnostics */}
-                <div style={{ display: "grid", gap: 16 }}>
-                  {/* ... (Links, Performance, Content & Structure blocks) ... */}
-                </div>
-
-                {/* Right: Checklist + Agent */}
-                <div style={{ display: "grid", gap: 16 }}>
-                  {/* ... (Checklist and Contact blocks) ... */}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <style>
@@ -903,7 +1034,7 @@ Score: ${data.score || "N/A"}
             background: linear-gradient(135deg, rgba(0, 255, 224, 0.02), rgba(115, 0, 255, 0.02));
         }
         .promotion-card:hover {
-             border-color: rgba(0, 255, 224, 0.4);
+           border-color: rgba(0, 255, 224, 0.4);
         }
       `}
       </style>
