@@ -1,130 +1,124 @@
-from fastapi import APIRouter, HTTPException, Depends, Body
-from pydantic import BaseModel, EmailStr
-from models.user import User
-from database import users_collection
-from bson import ObjectId
-from utils.auth import hash_password, verify_password
-from utils.jwt import create_access_token, verify_access_token
-from fastapi.security import OAuth2PasswordBearer
-from datetime import timedelta
+from typing import List, Optional
 
-# ✅ No prefix here, main.py handles "/users"
-router = APIRouter(tags=["Users"])
+from database import create_user, get_user_by_email, update_user_onboarding
+from fastapi import APIRouter, Depends, HTTPException, status
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+# Assuming this file is located at server/routes/users.py
+from models.user import OnboardingData, User
+from pydantic import BaseModel
+from utils.auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    get_password_hash,
+)
+
+# --- Models for this file (Request/Response Bodies) ---
 
 
-# ----------- Request Schemas -----------
-class UserLogin(BaseModel):
-    email: EmailStr
+class UserCreate(BaseModel):
+    username: str
+    email: str
     password: str
 
 
-# ----------- Endpoints -----------
-
-# Create user (Signup)
-@router.post("/signup")
-def create_user(user: User):
-    # Check if user already exists
-    if users_collection.find_one({"email": user.email}):
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    # Hash password before saving
-    user.password = hash_password(user.password)
-    user_dict = user.dict()
-    result = users_collection.insert_one(user_dict)
-
-    return {"id": str(result.inserted_id), "message": "User created successfully"}
+class UserResponse(BaseModel):
+    username: str
+    email: str
+    isOnboarded: bool
+    plan: str
 
 
-# Login user → return JWT
-@router.post("/login")
-def login_user(credentials: UserLogin):
-    user = users_collection.find_one({"email": credentials.email})
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    isOnboarded: bool
+
+
+class OnboardingResponse(BaseModel):
+    message: str
+    userId: str
+    isOnboarded: bool
+
+
+# Your main.py handles the prefix="/users"
+router = APIRouter(tags=["Users"])
+
+
+# --- Signup Endpoint (Path: /users/signup) ---
+@router.post(
+    "/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
+async def signup_user(user: UserCreate):
+    db_user = get_user_by_email(user.email)
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    hashed_password = get_password_hash(user.password)
+    new_user = user.dict()
+    new_user["hashed_password"] = hashed_password
+    del new_user["password"]
+
+    created_user = create_user(new_user)
+    return created_user
+
+
+# --- Login Endpoint (Path: /users/login) ---
+@router.post("/login", response_model=Token)
+async def login_for_access_token(form_data: LoginRequest):
+    user = authenticate_user(form_data.email, form_data.password)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    if not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid password")
+    access_token = create_access_token(data={"sub": user["email"]})
 
-    # Generate JWT
-    token_expires = timedelta(minutes=30)
-    token = create_access_token({"sub": str(user["_id"])}, expires_delta=token_expires)
-
-    return {"access_token": token, "token_type": "bearer"}
-
-
-# Get all users (protected)
-@router.get("/all")
-def get_users(token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    users = []
-    for user in users_collection.find():
-        user["_id"] = str(user["_id"])  # convert ObjectId to string
-        user.pop("password", None)      # don’t expose password
-        users.append(user)
-    return users
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "isOnboarded": user.get("isOnboarded", False),
+    }
 
 
-# Get single user (protected)
-@router.get("/{user_id}")
-def get_user(user_id: str, token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    user["_id"] = str(user["_id"])
-    user.pop("password", None)
-    return user
+# --- Get Current User Endpoint (Path: /users/me) ---
+@router.get("/me", response_model=UserResponse)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
-# Get current user from JWT
-@router.get("/me")
-def get_me(token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+# --- ONBOARDING ENDPOINT (Path: /users/me/onboard) ---
+@router.post("/me/onboard", response_model=OnboardingResponse)
+async def save_onboarding(
+    data: OnboardingData, current_user: User = Depends(get_current_user)
+):
+    """
+    Receives onboarding data from the frontend and saves it.
+    This endpoint also sets the user's `isOnboarded` flag to True.
+    """
+    try:
+        user_id = current_user["_id"]
 
-    user_id = payload.get("sub")
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        updated_user = update_user_onboarding(user_id, data.dict())
 
-    user["_id"] = str(user["_id"])
-    user.pop("password", None)
-    return user
+        if not updated_user:
+            raise HTTPException(status_code=500, detail="Failed to update user status.")
 
+        return {
+            "message": "Onboarding data saved successfully.",
+            "userId": user_id,
+            "isOnboarded": updated_user.get("isOnboarded", False),
+        }
 
-# Update user (protected)
-@router.put("/{user_id}")
-def update_user(user_id: str, update: dict = Body(...), token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    result = users_collection.update_one(
-        {"_id": ObjectId(user_id)},
-        {"$set": update}
-    )
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="User not found or no changes")
-    return {"message": "User updated successfully"}
-
-
-# Delete user (protected)
-@router.delete("/{user_id}")
-def delete_user(user_id: str, token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    result = users_collection.delete_one({"_id": ObjectId(user_id)})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")

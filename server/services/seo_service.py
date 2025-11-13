@@ -1,7 +1,8 @@
 import os
+from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
@@ -34,9 +35,15 @@ def get_pagespeed_insights(url: str, strategy: str = "desktop"):
         lighthouse = data.get("lighthouseResult", {}).get("categories", {})
         return {
             "seo_score": int(lighthouse.get("seo", {}).get("score", 0) * 100),
-            "performance_score": int(lighthouse.get("performance", {}).get("score", 0) * 100),
-            "best_practices": int(lighthouse.get("best-practices", {}).get("score", 0) * 100),
-            "accessibility": int(lighthouse.get("accessibility", {}).get("score", 0) * 100),
+            "performance_score": int(
+                lighthouse.get("performance", {}).get("score", 0) * 100
+            ),
+            "best_practices": int(
+                lighthouse.get("best-practices", {}).get("score", 0) * 100
+            ),
+            "accessibility": int(
+                lighthouse.get("accessibility", {}).get("score", 0) * 100
+            ),
         }
     except Exception as e:
         return {"error": str(e)}
@@ -92,7 +99,14 @@ async def analyze_url(url: str):
                 "metaTags": {},
                 "headings": {},
                 "content": {},
-                "links": {"internal": [], "external": [], "broken": [], "nofollow": [], "mailto": [], "tel": []},
+                "links": {
+                    "internal": [],
+                    "external": [],
+                    "broken": [],
+                    "nofollow": [],
+                    "mailto": [],
+                    "tel": [],
+                },
                 "structured_data": [],
                 "google_scores": {},
                 "score": 0,
@@ -109,22 +123,41 @@ async def analyze_url(url: str):
     title = soup.title.string.strip() if soup.title else "No Title"
 
     meta_desc = soup.find("meta", attrs={"name": "description"})
-    description = meta_desc.get("content").strip() if meta_desc and meta_desc.get("content") else None
+    description = (
+        meta_desc.get("content").strip()
+        if meta_desc and meta_desc.get("content")
+        else None
+    )
 
     meta_kw = soup.find("meta", attrs={"name": "keywords"})
-    keywords = [kw.strip() for kw in meta_kw.get("content", "").split(",") if kw] if meta_kw else []
+    keywords = (
+        [kw.strip() for kw in meta_kw.get("content", "").split(",") if kw]
+        if meta_kw
+        else []
+    )
 
     canonical_tag = soup.find("link", rel="canonical")
     canonical = canonical_tag.get("href") if canonical_tag else None
 
     robots_tag = soup.find("meta", attrs={"name": "robots"})
-    robots_content = robots_tag.get("content").lower() if robots_tag and robots_tag.get("content") else None
+    robots_content = (
+        robots_tag.get("content").lower()
+        if robots_tag and robots_tag.get("content")
+        else None
+    )
 
     favicon_tag = soup.find("link", rel="icon")
-    favicon = urljoin(url, favicon_tag.get("href")) if favicon_tag and favicon_tag.get("href") else None
+    favicon = (
+        urljoin(url, favicon_tag.get("href"))
+        if favicon_tag and favicon_tag.get("href")
+        else None
+    )
 
     # --- Headings ---
-    headings = {f"h{i}": [h.get_text(strip=True) for h in soup.find_all(f"h{i}")] for i in range(1, 7)}
+    headings = {
+        f"h{i}": [h.get_text(strip=True) for h in soup.find_all(f"h{i}")]
+        for i in range(1, 7)
+    }
 
     # --- Content stats ---
     all_text = soup.get_text()
@@ -133,8 +166,16 @@ async def analyze_url(url: str):
     image_tags = soup.find_all("img")
     image_count = len(image_tags)
     images_without_alt = [img.get("src") for img in image_tags if not img.get("alt")]
-    images_missing_dimensions = [img.get("src") for img in image_tags if not img.get("width") or not img.get("height")]
-    images_long_names = [img.get("src") for img in image_tags if img.get("src") and len(img.get("src")) > 50]
+    images_missing_dimensions = [
+        img.get("src")
+        for img in image_tags
+        if not img.get("width") or not img.get("height")
+    ]
+    images_long_names = [
+        img.get("src")
+        for img in image_tags
+        if img.get("src") and len(img.get("src")) > 50
+    ]
 
     # --- Links ---
     all_links = [a.get("href") for a in soup.find_all("a", href=True)]
@@ -159,7 +200,8 @@ async def analyze_url(url: str):
 
     # --- Structured data ---
     structured_data = [
-        script.get_text() for script in soup.find_all("script", attrs={"type": "application/ld+json"})
+        script.get_text()
+        for script in soup.find_all("script", attrs={"type": "application/ld+json"})
     ]
 
     # --- Performance meta ---
