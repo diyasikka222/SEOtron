@@ -817,11 +817,11 @@ Score: ${data.score || "N/A"}
                           justifyContent: "center",
                           gap: 16,
                           padding: "24px",
-                          minHeight: 220,
+                          minHeight: "220px", // <--- FIX 1
                           backgroundColor: "rgba(17, 17, 17, 0.7)",
                           borderColor: "rgba(177, 158, 239, 0.3)",
-                          "--spotlight-color": "rgba(177, 158, 239, 0.15)",
-                        } as React.CSSProperties & Properties
+                          // FIX 2: Removed --spotlight-color (it's handled by the CSS class)
+                        } as React.CSSProperties
                       }
                     >
                       <LockIcon />
