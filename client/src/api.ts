@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // 🔹 Backend base URL
-const API_BASE = "http://127.0.0.1:8000";
+// const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "https://seotron-backend.onrender.com";
 
 // -------------------------
 // Helper: Get Auth Header

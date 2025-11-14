@@ -19,7 +19,7 @@ app = FastAPI(
 origins = [
     "http://127.0.0.1:5173",  # Client dev origin 1
     "http://localhost:5173",  # Client dev origin 2
-    # Add your Render frontend URL here once it's deployed
+    "https://seotron.onrender.com",
 ]
 
 app.add_middleware(
