@@ -20,7 +20,7 @@ import {
 } from "../components/ui/tabs";
 import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
-import DotGrid from "./DotGrid";
+import DotGrid from "./DotGrid"; // Assuming DotGrid.tsx is in components/
 import {
   User,
   CreditCard,
@@ -52,8 +52,8 @@ export const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // FIX: Renamed unused const (uid) to underscore
-  const [_notifications, setNotifications] = useState({
+  // FIX: Renamed back to 'notifications' as it IS used
+  const [notifications, setNotifications] = useState({
     weeklySummary: true,
     rankAlerts: false,
     securityAlerts: true,
@@ -213,9 +213,9 @@ export const Profile = () => {
                       Update your profile details here.
                     </CardDescription>
                   </CardHeader>
-                  {/* FIX: Removed as="form" and added a native <form> element inside CardContent */}
-                  <CardContent className="space-y-6">
-                    <form onSubmit={handleUpdateProfile}>
+                  {/* FIX: Removed 'as="form"' and added a native <form> element inside */}
+                  <CardContent>
+                    <form onSubmit={handleUpdateProfile} className="space-y-6">
                       <div className="flex items-center space-x-4">
                         <Avatar className="h-20 w-20">
                           <AvatarImage
@@ -233,7 +233,7 @@ export const Profile = () => {
                           Change Avatar (Mock)
                         </Button>
                       </div>
-                      <div className="space-y-2 mt-4">
+                      <div className="space-y-2">
                         <label className="text-sm font-medium text-white/80">
                           Full Name
                         </label>
@@ -271,7 +271,7 @@ export const Profile = () => {
                       </div>
                       <Button
                         type="submit"
-                        className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold mt-4"
+                        className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
                       >
                         Save Changes
                       </Button>
@@ -347,9 +347,9 @@ export const Profile = () => {
                       password.
                     </CardDescription>
                   </CardHeader>
-                  {/* FIX: Removed as="form" and added a native <form> element inside CardContent */}
-                  <CardContent className="space-y-4">
-                    <form onSubmit={handleChangePassword}>
+                  {/* FIX: Removed 'as="form"' and added a native <form> element inside */}
+                  <CardContent>
+                    <form onSubmit={handleChangePassword} className="space-y-4">
                       {error && (
                         <p className="text-red-500 text-sm text-center">
                           {error}
@@ -390,7 +390,7 @@ export const Profile = () => {
                       </div>
                       <Button
                         type="submit"
-                        className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold mt-4"
+                        className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
                       >
                         Update Password
                       </Button>
@@ -420,8 +420,7 @@ export const Profile = () => {
                         </p>
                       </div>
                       <Switch
-                        // FIX: Use the prefixed state to avoid TS6133 warnings
-                        checked={_notifications.weeklySummary}
+                        checked={notifications.weeklySummary}
                         onCheckedChange={(checked) =>
                           setNotifications((n) => ({
                             ...n,
@@ -441,8 +440,7 @@ export const Profile = () => {
                         </p>
                       </div>
                       <Switch
-                        // FIX: Use the prefixed state to avoid TS6133 warnings
-                        checked={_notifications.rankAlerts}
+                        checked={notifications.rankAlerts}
                         onCheckedChange={(checked) =>
                           setNotifications((n) => ({
                             ...n,
@@ -461,8 +459,7 @@ export const Profile = () => {
                         </p>
                       </div>
                       <Switch
-                        // FIX: Use the prefixed state to avoid TS6133 warnings
-                        checked={_notifications.securityAlerts}
+                        checked={notifications.securityAlerts}
                         onCheckedChange={(checked) =>
                           setNotifications((n) => ({
                             ...n,
