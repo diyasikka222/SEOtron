@@ -1016,7 +1016,7 @@ function ExpandedSitePanel({
                 </select>
                 <button
                   style={primarySmall}
-                  onClick={() => onSetSchedule(schedule || undefined)} // FIX: Changed null to undefined
+                  onClick={() => onSetSchedule(schedule || undefined)}
                 >
                   Apply
                 </button>
@@ -1077,7 +1077,7 @@ function ExpandedSitePanel({
 
 // -------------------- AI Chat Modal Component --------------------
 const AiModal = ({
-  onClose,
+  onClose: _onClose,
   site,
   notify,
 }: {
