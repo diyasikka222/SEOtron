@@ -8,7 +8,10 @@ pymongo
 motor
 
 # Security & Auth
-passlib[bcrypt]
+passlib
+bcrypt
+python-jose
+cryptography
 
 # Web Scraping & Analysis
 requests
