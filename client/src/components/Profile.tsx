@@ -20,7 +20,7 @@ import {
 } from "../components/ui/tabs";
 import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
-import DotGrid from "./DotGrid"; // Assuming DotGrid.tsx is in components/
+import DotGrid from "./DotGrid";
 import {
   User,
   CreditCard,
@@ -52,7 +52,8 @@ export const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [notifications, setNotifications] = useState({
+  // FIX: Renamed unused const (uid) to underscore
+  const [_notifications, setNotifications] = useState({
     weeklySummary: true,
     rankAlerts: false,
     securityAlerts: true,
@@ -212,70 +213,69 @@ export const Profile = () => {
                       Update your profile details here.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent
-                    as="form"
-                    onSubmit={handleUpdateProfile}
-                    className="space-y-6"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-20 w-20">
-                        <AvatarImage
-                          src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email}`}
-                          alt={user?.username}
+                  {/* FIX: Removed as="form" and added a native <form> element inside CardContent */}
+                  <CardContent className="space-y-6">
+                    <form onSubmit={handleUpdateProfile}>
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage
+                            src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email}`}
+                            alt={user?.username}
+                          />
+                          <AvatarFallback>
+                            {user?.username.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <Button
+                          variant="outline"
+                          className="bg-black/40 border-white/20 text-white"
+                        >
+                          Change Avatar (Mock)
+                        </Button>
+                      </div>
+                      <div className="space-y-2 mt-4">
+                        <label className="text-sm font-medium text-white/80">
+                          Full Name
+                        </label>
+                        <Input
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="bg-black/40 border-white/20 text-white"
                         />
-                        <AvatarFallback>
-                          {user?.username.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/80">
+                          Email Address
+                        </label>
+                        <Input
+                          value={user?.email || ""}
+                          readOnly
+                          disabled
+                          className="bg-black/20 border-white/10 text-white/60"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/80">
+                          Member Since
+                        </label>
+                        <Input
+                          value={
+                            user
+                              ? new Date(user.created_at).toLocaleDateString()
+                              : ""
+                          }
+                          readOnly
+                          disabled
+                          className="bg-black/20 border-white/10 text-white/60"
+                        />
+                      </div>
                       <Button
-                        variant="outline"
-                        className="bg-black/40 border-white/20 text-white"
+                        type="submit"
+                        className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold mt-4"
                       >
-                        Change Avatar (Mock)
+                        Save Changes
                       </Button>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80">
-                        Full Name
-                      </label>
-                      <Input
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="bg-black/40 border-white/20 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80">
-                        Email Address
-                      </label>
-                      <Input
-                        value={user?.email || ""}
-                        readOnly
-                        disabled
-                        className="bg-black/20 border-white/10 text-white/60"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80">
-                        Member Since
-                      </label>
-                      <Input
-                        value={
-                          user
-                            ? new Date(user.created_at).toLocaleDateString()
-                            : ""
-                        }
-                        readOnly
-                        disabled
-                        className="bg-black/20 border-white/10 text-white/60"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
-                    >
-                      Save Changes
-                    </Button>
+                    </form>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -347,55 +347,54 @@ export const Profile = () => {
                       password.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent
-                    as="form"
-                    onSubmit={handleChangePassword}
-                    className="space-y-4"
-                  >
-                    {error && (
-                      <p className="text-red-500 text-sm text-center">
-                        {error}
-                      </p>
-                    )}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80">
-                        Old Password
-                      </label>
-                      <Input
-                        type="password"
-                        value={oldPassword}
-                        onChange={(e) => setOldPassword(e.target.value)}
-                        className="bg-black/40 border-white/20 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80">
-                        New Password
-                      </label>
-                      <Input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="bg-black/40 border-white/20 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80">
-                        Confirm New Password
-                      </label>
-                      <Input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="bg-black/40 border-white/20 text-white"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold"
-                    >
-                      Update Password
-                    </Button>
+                  {/* FIX: Removed as="form" and added a native <form> element inside CardContent */}
+                  <CardContent className="space-y-4">
+                    <form onSubmit={handleChangePassword}>
+                      {error && (
+                        <p className="text-red-500 text-sm text-center">
+                          {error}
+                        </p>
+                      )}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/80">
+                          Old Password
+                        </label>
+                        <Input
+                          type="password"
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          className="bg-black/40 border-white/20 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/80">
+                          New Password
+                        </label>
+                        <Input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="bg-black/40 border-white/20 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-white/80">
+                          Confirm New Password
+                        </label>
+                        <Input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="bg-black/40 border-white/20 text-white"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        className="bg-gradient-to-r from-[#61DAFB] via-[#1fc0f1] to-[#03a3d7] text-black font-semibold mt-4"
+                      >
+                        Update Password
+                      </Button>
+                    </form>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -421,7 +420,8 @@ export const Profile = () => {
                         </p>
                       </div>
                       <Switch
-                        checked={notifications.weeklySummary}
+                        // FIX: Use the prefixed state to avoid TS6133 warnings
+                        checked={_notifications.weeklySummary}
                         onCheckedChange={(checked) =>
                           setNotifications((n) => ({
                             ...n,
@@ -441,7 +441,8 @@ export const Profile = () => {
                         </p>
                       </div>
                       <Switch
-                        checked={notifications.rankAlerts}
+                        // FIX: Use the prefixed state to avoid TS6133 warnings
+                        checked={_notifications.rankAlerts}
                         onCheckedChange={(checked) =>
                           setNotifications((n) => ({
                             ...n,
@@ -460,7 +461,8 @@ export const Profile = () => {
                         </p>
                       </div>
                       <Switch
-                        checked={notifications.securityAlerts}
+                        // FIX: Use the prefixed state to avoid TS6133 warnings
+                        checked={_notifications.securityAlerts}
                         onCheckedChange={(checked) =>
                           setNotifications((n) => ({
                             ...n,
@@ -510,9 +512,3 @@ export const Profile = () => {
     </section>
   );
 };
-
-// You will need to create and export these components from your ui folder:
-// - ui/avatar.tsx
-// - ui/tabs.tsx
-// - ui/switch.tsx
-// - ui/separator.tsx

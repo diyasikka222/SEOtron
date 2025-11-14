@@ -92,9 +92,9 @@ export const Hero = () => {
         </div>
 
         {/* 5. CONTENT (Unchanged, just nested) */}
-        <div className="z-10">
+        {/*<div className="z-10">
           <HeroCards />
-        </div>
+        </div>*/}
 
         {/* Shadow effect (I've left this inside the grid as it was before) */}
         <div className="shadow"></div>

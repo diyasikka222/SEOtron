@@ -2379,6 +2379,15 @@ export const DashboardDeep = () => {
           />
         </Modal>
       )}
+      {showAiModal && selectedSite && (
+        <Modal onClose={() => setShowAiModal(false)} wide={false}>
+          <AiModal
+            site={selectedSite}
+            onClose={() => setShowAiModal(false)}
+            notify={notify}
+          />
+        </Modal>
+      )}
       {/* toast */}
       {toast && <div style={toastStyle}>{toast}</div>}
     </div>

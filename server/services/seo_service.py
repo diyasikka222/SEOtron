@@ -1,24 +1,23 @@
-# Removed: import openai
 import asyncio
 import os
 from urllib.parse import urljoin, urlparse
 
+# ✨ 1. Import the new library standard
+import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from google import genai  # ✨ NEW: Import Google GenAI library
-from google.genai import types  # ✨ NEW: Import Types
 from playwright.async_api import async_playwright
+
+# Removed: from google.genai import types (no longer needed for this model)
 
 # Load .env variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_PAGESPEED_API_KEY")
-# Using the key specific to the Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Initialize Gemini client
-# The client automatically reads the GEMINI_API_KEY environment variable.
-gemini_client = genai.Client()
+# ✨ 2. Configure the API key (This is the only setup needed)
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 # -------------------------------------------------
@@ -60,7 +59,7 @@ def get_pagespeed_insights(url: str, strategy: str = "desktop"):
 
 
 # -------------------------------------------------
-# URL SEO Analysis (Original Content)
+# URL SEO Analysis (Original Content - Unchanged)
 # -------------------------------------------------
 async def analyze_url(url: str):
     # ✅ Normalize URL
@@ -239,7 +238,7 @@ async def analyze_url(url: str):
 
 
 # -------------------------------------------------
-# ✨ NEW: AI Analysis Service (Using Gemini)
+# ✨ 3. UPDATED: AI Analysis Service (Using Gemini GenerativeModel)
 # -------------------------------------------------
 async def ask_ai_for_report(query: str, context: dict):
     """Generates an SEO response using Google Gemini based on user query and site context."""
@@ -259,21 +258,20 @@ async def ask_ai_for_report(query: str, context: dict):
     )
 
     try:
-        response = gemini_client.models.generate_content(
-            model="gemini-2.5-flash",  # Fast, cost-effective, and powerful model
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part.from_text(
-                            f"SYSTEM INSTRUCTION: {system_instruction}\n\nSITE CONTEXT: {site_info}\n\nUSER QUESTION: {query}"
-                        )
-                    ],
-                )
-            ],
-            config=types.GenerateContentConfig(
-                temperature=0.4,
-            ),
+        # Use the modern, high-level interface (replaces genai.Client)
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash-latest",  # Use the 'latest' tag for the newest flash model
+            system_instruction=system_instruction,
+        )
+
+        generation_config = genai.types.GenerationConfig(temperature=0.4)
+
+        # Combine all info into a single prompt for the 'user' role
+        full_prompt = f"SITE CONTEXT: {site_info}\n\nUSER QUESTION: {query}"
+
+        # Use the async version for FastAPI
+        response = await model.generate_content_async(
+            full_prompt, generation_config=generation_config
         )
 
         return {"generated_text": response.text, "error": None}
