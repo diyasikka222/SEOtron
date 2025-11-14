@@ -1016,7 +1016,7 @@ function ExpandedSitePanel({
                 </select>
                 <button
                   style={primarySmall}
-                  onClick={() => onSetSchedule(schedule || undefined)}
+                  onClick={() => onSetSchedule(schedule || undefined)} // FIX: Changed null to undefined
                 >
                   Apply
                 </button>
@@ -1076,6 +1076,7 @@ function ExpandedSitePanel({
 }
 
 // -------------------- AI Chat Modal Component --------------------
+// FIX: Prefixed unused 'onClose' prop with _
 const AiModal = ({
   onClose: _onClose,
   site,
@@ -2257,7 +2258,6 @@ export const DashboardDeep = () => {
                 </button>
                 <button
                   style={primaryBtn}
-                  // FIX: Changed onClick to open the new AI Modal
                   onClick={() => {
                     if (selectedSite) {
                       setShowAiModal(true);
@@ -2385,7 +2385,10 @@ export const DashboardDeep = () => {
         </div>
       </div>
 
-      {/* FIX: This entire block was missing, causing the "is not used" errors */}
+      {/* ======================================================== */}
+      {/* ✨ FIX: ADDED THIS BLOCK TO RENDER MODALS & FIX ERRORS ✨ */}
+      {/* ======================================================== */}
+
       {/* Plans modal */}
       {showPlansModal && (
         <Modal onClose={() => setShowPlansModal(false)} wide>
