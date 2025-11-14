@@ -1,9 +1,6 @@
 # Main Web Server
 fastapi
 uvicorn[standard]
-pydantic[email]
-python-dotenv
-sse-starlette
 gunicorn
 
 # Database
@@ -11,7 +8,7 @@ pymongo
 motor
 
 # Security & Auth
-passlib[bcrypt]
+passlib[bcrypt]  # <-- This will now install compatible versions
 python-jose[cryptography]
 
 # Web Scraping & Analysis
@@ -22,4 +19,9 @@ lxml
 playwright
 
 # Google AI
-google-generativeai
+google-generativeai  # <-- This will install the latest version
+
+# Other dependencies
+python-dotenv
+sse-starlette
+pydantic[email]
