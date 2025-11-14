@@ -14,7 +14,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 # --- Config ---
-SECRET_KEY = os.getenv("SECRET_KEY", "your_fallback_secret_key_here_please_change")
+SECRET_KEY = os.getenv("SECRET_KEY", "435768")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
