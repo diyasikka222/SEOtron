@@ -34,7 +34,6 @@ class TokenData(BaseModel):
 
 
 def verify_password(plain_password, hashed_password):
-    """Checks if a plain password matches a hashed one."""
     # FIX: Truncate password to 72 bytes before verifying
     password_bytes = plain_password.encode("utf-8")
     truncated_password = password_bytes[:72]
