@@ -20,7 +20,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # --- Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/users/login",
     auto_error=False,  # Don't automatically raise HTTP 401
@@ -36,7 +35,10 @@ class TokenData(BaseModel):
 
 def verify_password(plain_password, hashed_password):
     """Checks if a plain password matches a hashed one."""
-    return pwd_context.verify(plain_password, hashed_password)
+    # FIX: Truncate password to 72 bytes before verifying
+    password_bytes = plain_password.encode("utf-8")
+    truncated_password = password_bytes[:72]
+    return pwd_context.verify(truncated_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -69,13 +71,13 @@ def authenticate_user(email: str, password: str) -> Optional[dict]:
     # Safely check for 'hashed_password' to prevent KeyError
     hashed_password = user.get("hashed_password")
 
+    # FIX: We must also truncate the password when verifying it
     if not hashed_password or not verify_password(password, hashed_password):
         return None
 
     return user
 
 
-# ✨ CRITICAL FIX 2: Change return type and logic for public access
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> Optional[dict]:
