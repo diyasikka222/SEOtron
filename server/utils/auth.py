@@ -20,7 +20,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # --- Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# ✨ CRITICAL FIX 1: Set auto_error=False to prevent immediate 401 on missing token
+
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/users/login",
     auto_error=False,  # Don't automatically raise HTTP 401
