@@ -1,14 +1,29 @@
+# Main Web Server
 fastapi
 uvicorn[standard]
-pydantic[email]
+gunicorn
+
+# Database
 pymongo
 motor
-passlib[bcrypt]
-python-jose[cryptography]
+
+# Security & Auth
+passlib
+bcrypt
+python-jose
+cryptography
+
+# Web Scraping & Analysis
 requests
 beautifulsoup4
-python-dotenv
 requests-html
-lxml[html_clean]
+lxml
+playwright
 
+# Google AI
+google-generativeai
 
+# Other dependencies
+python-dotenv
+sse-starlette
+pydantic[email]

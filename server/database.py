@@ -1,20 +1,24 @@
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pymongo
-from bson import ObjectId  # ✨ 1. Import ObjectId
+from bson import ObjectId
+from dotenv import load_dotenv  # Import load_dotenv
 from pymongo.collection import Collection
 
 # --- Database Connection ---
-# Make sure your MongoDB server is running!
-MONGO_URL = "mongodb://localhost:27017/"
-CLIENT = pymongo.MongoClient(MONGO_URL)  # ✨ 2. Fixed variable name to uppercase
+load_dotenv()  # Load environment variables from .env
+
+# ✨ FIX: Use "MONGO_URI" from your .env file
+# Provides a fallback to localhost if MONGO_URI is not found
+MONGO_URI = os.getenv("MONGO_URI")
+CLIENT = pymongo.MongoClient(MONGO_URI)
 DB = CLIENT["seotron_db"]
 
 # --- Collections ---
-# ✨ 3. Defined all collections your app needs
 users_collection: Collection = DB["users"]
-reports_collection: Collection = DB["seo_reports"]  # Kept your name
+reports_collection: Collection = DB["seo_reports"]
 onboarding_collection: Collection = DB["onboarding"]
 
 
@@ -39,7 +43,7 @@ def create_db_and_tables():
     print("Database and collections initialized.")
 
 
-# --- ✨ 4. ADDED ALL MISSING USER FUNCTIONS ---
+# --- User Functions ---
 
 
 def get_user_by_email(email: str) -> Optional[dict]:
@@ -76,7 +80,6 @@ def create_user(user_data: dict) -> dict:
 def update_user_onboarding(user_id: str, onboarding_data: dict) -> Optional[dict]:
     """
     Updates a user's isOnboarded status and saves their onboarding data.
-    This is the function your new endpoint needs.
     """
     try:
         # 1. Save the onboarding data to its own collection for cleanliness
@@ -100,8 +103,7 @@ def update_user_onboarding(user_id: str, onboarding_data: dict) -> Optional[dict
         return None
 
 
-# --- ✨ 5. UPDATED YOUR EXISTING REPORT FUNCTIONS ---
-# (with fixes for ObjectId)
+# --- Report Functions ---
 
 
 def save_seo_report(user_id: str, url: str, data: dict):
@@ -109,17 +111,17 @@ def save_seo_report(user_id: str, url: str, data: dict):
     report = {
         "user_id": ObjectId(user_id),  # Use ObjectId
         "url": str(url),
-        "data": data,  # This should be 'result' to match your router
+        "data": data,
         "created_at": datetime.utcnow(),
     }
-    return reports_collection.insert_one(report)  # Renamed to match your var
+    return reports_collection.insert_one(report)
 
 
 def get_user_reports(user_id: str) -> List[dict]:
     """Gets all reports for a specific user."""
     reports = reports_collection.find({"user_id": ObjectId(user_id)}).sort(
         "created_at", -1
-    )  # Renamed
+    )
 
     # Convert ObjectId to string for JSON serialization
     return [

@@ -3,6 +3,7 @@ import PixelBlast from "./PixelBlast"; // ✨ 1. IMPORTED
 import React, { useMemo, useState } from "react";
 import { analyzeURL } from "../api";
 import { useNavigate } from "react-router-dom";
+import { Properties } from "csstype"; // Import Properties for the CSS fix
 
 type Rec = { title: string; detail: string };
 type CheckItem = { id: string; label: string; score?: number; hint?: string };
@@ -32,12 +33,15 @@ export const SEOAnalyzer = () => {
   const [loading, setLoading] = useState(false);
   const [displayedText, setDisplayedText] = useState<string>("");
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedChecks, setSelectedChecks] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [meetName, setMeetName] = useState("");
-  const [meetEmail, setMeetEmail] = useState("");
-  const [meetStart, setMeetStart] = useState(""); // datetime-local
+
+  // FIX: Prefix unused setters and states with underscore
+  const [_selectedChecks, _setSelectedChecks] = useState<
+    Record<string, boolean>
+  >({});
+  const [_meetName, _setMeetName] = useState("");
+  const [_meetEmail, _setMeetEmail] = useState("");
+  const [_meetStart, _setMeetStart] = useState(""); // datetime-local
+
   const navigate = useNavigate();
 
   const isHeroLayout = !result && !loading;
@@ -363,19 +367,20 @@ Score: ${data.score || "N/A"}
       }));
   }, [factorScores]);
 
-  const openCalendarMVP = () => {
-    if (!meetStart) {
+  // FIX: Renamed unused functions to start with underscore
+  const _openCalendarMVP = () => {
+    if (!_meetStart) {
       alert("Pick a start time.");
       return;
     }
-    const start = new Date(meetStart);
+    const start = new Date(_meetStart);
     const end = new Date(start.getTime() + 60 * 60 * 1000); // +1h
     const fmt = (d: Date) =>
       d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 
     const params = new URLSearchParams({
-      text: meetName ? `SEO Consultation – ${meetName}` : "SEO Consultation",
-      details: `Requested by ${meetEmail || "client"} about ${url || "your website"}.`,
+      text: _meetName ? `SEO Consultation – ${_meetName}` : "SEO Consultation",
+      details: `Requested by ${_meetEmail || "client"} about ${url || "your website"}.`,
       location: "Google Meet (add conferencing inside Calendar)",
       dates: `${fmt(start)}/${fmt(end)}`,
     });
@@ -384,8 +389,8 @@ Score: ${data.score || "N/A"}
     window.open(href, "_blank");
   };
 
-  const addSelectedToDashboard = () => {
-    const chosen = checklist.filter((c) => selectedChecks[c.id]);
+  const _addSelectedToDashboard = () => {
+    const chosen = checklist.filter((c) => _selectedChecks[c.id]);
     if (!chosen.length) {
       alert("Select at least one item.");
       return;
@@ -463,7 +468,7 @@ Score: ${data.score || "N/A"}
         <div style={{ flex: 1 }} />
       </div>
 
-      {/* Content container */}
+      {/* Content container (This is the div from line 409) */}
       <div
         style={{
           position: "relative",
@@ -649,7 +654,11 @@ Score: ${data.score || "N/A"}
                     }}
                   >
                     <div
-                      style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 800,
+                        marginBottom: 8,
+                      }}
                     >
                       SEO Score
                     </div>
@@ -799,18 +808,21 @@ Score: ${data.score || "N/A"}
                     <div
                       className="card-spotlight"
                       onMouseMove={handleCardMouseMove}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 16,
-                        padding: "24px",
-                        minHeight: 220,
-                        backgroundColor: "rgba(17, 17, 17, 0.7)",
-                        borderColor: "rgba(177, 158, 239, 0.3)",
-                        "--spotlight-color": "rgba(177, 158, 239, 0.15)",
-                      }}
+                      // FIX: Cast style to allow CSS variables
+                      style={
+                        {
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 16,
+                          padding: "24px",
+                          minHeight: "220px", // <--- FIX 1
+                          backgroundColor: "rgba(17, 17, 17, 0.7)",
+                          borderColor: "rgba(177, 158, 239, 0.3)",
+                          // FIX 2: Removed --spotlight-color (it's handled by the CSS class)
+                        } as React.CSSProperties
+                      }
                     >
                       <LockIcon />
                       <h4
@@ -912,6 +924,7 @@ Score: ${data.score || "N/A"}
             </div>
           )}
         </div>
+        {/* FIX: This is the closing tag for the div at line 409 */}
       </div>
 
       <style>
@@ -933,15 +946,9 @@ Score: ${data.score || "N/A"}
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        @keyframes floatBlobs {
-          0% { transform: translateY(0px) scale(1); }
-          100% { transform: translateY(-10px) scale(1.02); }
-        }
-
-        /* NEW: Sleek Button Style (Shorter/Slimmer) */
         .sleek-button {
-            padding: 8px 18px; /* Slimmer padding */
-            border-radius: 10px; /* Slightly tighter radius */
+            padding: 8px 18px;
+            border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.15);
             background: rgba(255,255,255,0.06);
             color: #fff;
@@ -954,9 +961,8 @@ Score: ${data.score || "N/A"}
             transform: translateY(-1px);
         }
 
-        /* NEW: Analyze Button (Shorter/Slimmer) */
         .analyze-button {
-            padding: 8px 20px; /* Slimmer padding */
+            padding: 8px 20px;
             border-radius: 10px;
             border: none;
             background: linear-gradient(135deg, #6a82fb, #00c2ff);
@@ -1034,16 +1040,18 @@ Score: ${data.score || "N/A"}
             background: linear-gradient(135deg, rgba(0, 255, 224, 0.02), rgba(115, 0, 255, 0.02));
         }
         .promotion-card:hover {
-           border-color: rgba(0, 255, 224, 0.4);
+            border-color: rgba(0, 255, 224, 0.4);
         }
       `}
       </style>
+      {/* FIX: This is the closing tag for the root component div */}
     </div>
   );
 };
 
 // ---------- small UI helpers ----------
-const fieldStyle: React.CSSProperties = {
+// FIX: Prefixed unused const with _
+const _fieldStyle: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 12,
   border: "1px solid rgba(255,255,255,0.12)",
@@ -1052,11 +1060,12 @@ const fieldStyle: React.CSSProperties = {
   outline: "none",
 };
 
-const Metric: React.FC<{ label: string; value?: number; valueMs?: number }> = ({
-  label,
-  value,
-  valueMs,
-}) => {
+// FIX: Prefixed unused component with _
+const _Metric: React.FC<{
+  label: string;
+  value?: number;
+  valueMs?: number;
+}> = ({ label, value, valueMs }) => {
   // ... (This component remains unchanged)
   // REMOVED the extra 'S' from this line
   const fmt = (v?: number) =>

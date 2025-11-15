@@ -1,6 +1,12 @@
-from database import create_db_and_tables
+# ✨ FIX: Load .env variables *before* importing other modules
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv()
+
+# Import local modules AFTER .env is loaded
+from database import create_db_and_tables
 from routes import analytics, seo, users
 
 # --- 1. Create FastAPI app ---
@@ -13,6 +19,7 @@ app = FastAPI(
 origins = [
     "http://127.0.0.1:5173",  # Client dev origin 1
     "http://localhost:5173",  # Client dev origin 2
+    "https://seotron.onrender.com",
 ]
 
 app.add_middleware(

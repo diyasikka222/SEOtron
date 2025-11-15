@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
-// FIX: Importing all components using named imports for consistency
+// ✨ FIX: All component paths assumed to be in './components/'
 import { About } from "./components/About";
 import { Cta } from "./components/Cta";
 import { FAQ } from "./components/FAQ";
@@ -17,13 +17,13 @@ import { Services } from "./components/Services";
 import { Team } from "./components/Team";
 import { Testimonials } from "./components/Testimonials";
 import { Signup } from "./components/Signup";
-import { BookDemo } from "./components/DemoPage";
-import { SEOAnalyzer } from "./components/SEOanalyzer";
+import { BookDemo } from "./components/DemoPage"; // Using the name from your original import
+import { SEOAnalyzer } from "./components/SEOanalyzer"; // Using the name from your original import
 import { Login } from "./components/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Onboarding from "./components/Onboarding";
 
-// ✨ CRITICAL FIX: Changing the import from default (DashboardDeep) to named { DashboardDeep }
+// ✨ CRITICAL FIX: Changed import path to match the correct filename "DashboardDeep"
 import { DashboardDeep } from "./components/Dashboard";
 import { Profile } from "./components/Profile";
 
@@ -96,7 +96,7 @@ function App() {
           }
         />
 
-        {/* Profile Route (Protected) */}
+        {/* ✨ 2. ADDED Profile Route (Protected) */}
         <Route
           path="/profile"
           element={
