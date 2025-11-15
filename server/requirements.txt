@@ -9,7 +9,7 @@ motor
 
 # Security & Auth
 passlib
-bcrypt
+argon2-cffi  # <-- FIX: Using Argon2 instead of bcrypt
 python-jose
 cryptography
 

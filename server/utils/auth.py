@@ -19,7 +19,9 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # --- Hashing ---
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ✨ FIX: Switched from "bcrypt" to "argon2"
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/users/login",
     auto_error=False,  # Don't automatically raise HTTP 401
@@ -34,17 +36,14 @@ class TokenData(BaseModel):
 
 
 def verify_password(plain_password, hashed_password):
-    # FIX: Truncate password to 72 bytes before verifying
-    password_bytes = plain_password.encode("utf-8")
-    truncated_password = password_bytes[:72]
-    return pwd_context.verify(truncated_password, hashed_password)
+    """Checks if a plain password matches a hashed one."""
+    # FIX: No truncation needed for argon2
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    # FIX: Truncate password to 72 bytes to prevent bcrypt ValueError
-    password_bytes = password.encode("utf-8")
-    truncated_password = password_bytes[:72]
-    return pwd_context.hash(truncated_password)
+    # FIX: No truncation needed for argon2
+    return pwd_context.hash(password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -67,10 +66,8 @@ def authenticate_user(email: str, password: str) -> Optional[dict]:
     if not user:
         return None
 
-    # Safely check for 'hashed_password' to prevent KeyError
     hashed_password = user.get("hashed_password")
 
-    # FIX: We must also truncate the password when verifying it
     if not hashed_password or not verify_password(password, hashed_password):
         return None
 
@@ -85,27 +82,20 @@ async def get_current_user(
     or None if the token is missing/invalid (for public access).
     """
     if token is None:
-        # No token provided, user is anonymous. This is allowed for public routes.
         return None
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        # 'sub' (subject) of the token is the user's email
         email: str = payload.get("sub")
 
         if email is None:
-            # Malformed payload
             return None
 
-        # Uses the imported function
         user = get_user_by_email(email)
         if user is None:
-            # User deleted since token creation
             return None
 
-        # If successful, return the user dictionary
         return user
 
     except JWTError:
-        # Token is expired or invalid signature
         return None
