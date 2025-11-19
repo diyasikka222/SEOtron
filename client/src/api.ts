@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // 🔹 Backend base URL
-//const API_BASE = "http://127.0.0.1:8000";
+// const API_BASE = "http://127.0.0.1:8000";
 const API_BASE = "https://seotron-backend.onrender.com";
 
 // -------------------------
@@ -9,7 +9,8 @@ const API_BASE = "https://seotron-backend.onrender.com";
 // -------------------------
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
-  // CRITICAL: Must return Authorization header if token exists
+  // FIX: Return empty object if no token (prevents "Bearer null" errors)
+  if (!token) return {}; 
   return { Authorization: `Bearer ${token}` };
 };
 
@@ -30,7 +31,7 @@ const handleApiError = (error: any) => {
 };
 
 // -------------------------
-// User APIs (Unchanged)
+// User APIs
 // -------------------------
 export const signupUser = async (data: {
   username: string;
@@ -48,6 +49,7 @@ export const signupUser = async (data: {
 export const loginUser = async (data: { email: string; password: string }) => {
   try {
     const res = await axios.post(`${API_BASE}/users/login`, data);
+    // Save token immediately
     localStorage.setItem("token", res.data.access_token);
     return res.data;
   } catch (error) {
@@ -67,7 +69,7 @@ export const getCurrentUser = async () => {
 };
 
 // -------------------------
-// Onboarding and Analytics APIs (Unchanged)
+// Onboarding and Analytics APIs
 // -------------------------
 export const saveOnboardingData = async (onboardingData: any) => {
   try {
@@ -84,6 +86,7 @@ export const saveOnboardingData = async (onboardingData: any) => {
 
 export const getAnalytics = async () => {
   try {
+    // Matches 'analytics.router' prefix="/api" in main.py
     const res = await axios.get(`${API_BASE}/api/analytics`);
     return res.data;
   } catch (error) {
@@ -116,12 +119,14 @@ export const subscribeToEvents = (
 };
 
 // -------------------------
-// SEO APIs (Unchanged)
+// SEO APIs (Fix applied here)
 // -------------------------
 export const analyzeURL = async (url: string) => {
   try {
+    // ✨ FIX: Changed from /api/analyze to /seo/analyze
+    // Ensure your main.py has: app.include_router(seo.router, prefix="/seo", ...)
     const res = await axios.post(
-      `${API_BASE}/api/analyze`,
+      `${API_BASE}/seo/analyze`,
       { url },
       { headers: getAuthHeader() },
     );
@@ -134,7 +139,7 @@ export const analyzeURL = async (url: string) => {
 export const analyzeKeyword = async (keyword: string) => {
   try {
     const res = await axios.post(
-      `${API_BASE}/api/keyword`,
+      `${API_BASE}/seo/keyword`, // Assumed to be in SEO router
       { keyword },
       { headers: getAuthHeader() },
     );
@@ -145,25 +150,22 @@ export const analyzeKeyword = async (keyword: string) => {
 };
 
 // -------------------------
-// ✨ UPDATED AI API CALL (GEMINI)
+// AI API Call (Gemini)
 // -------------------------
 export const askAiForReport = async (query: string, context: any) => {
   try {
-    // NOTE: Changed endpoint to /api/ask_ai
+    // ✨ FIX: Changed path to match seo.py ("/ask_ai") and main.py prefix ("/seo")
     const res = await axios.post(
-      `${API_BASE}/api/ask_ai`,
+      `${API_BASE}/seo/ask_ai`, 
       { query, context },
-      // CRITICAL: We assume the backend handles authentication internally.
-      // We pass the header for premium users, but the backend must tolerate anonymous calls.
       { headers: getAuthHeader() },
     );
     return res.data;
   } catch (error: any) {
-    // Return error structure for the frontend modal to display
     return {
       error:
         error.response?.data?.detail ||
-        "AI Request Failed (Network Error). Check Server Logs.",
+        "AI Request Failed. Check Server Logs.",
     };
   }
 };

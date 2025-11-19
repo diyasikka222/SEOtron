@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from services.seo_service import analyze_keyword, analyze_url, ask_ai_for_report
 from utils.auth import get_current_user
 
-router = APIRouter(prefix="/api", tags=["SEO"])
+router = APIRouter(tags=["SEO"])
 
 
 # -------------------------

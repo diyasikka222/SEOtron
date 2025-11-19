@@ -36,7 +36,7 @@ app.add_middleware(
 # Routers (Must be included after CORS middleware is added)
 # -----------------------------------
 app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(seo.router, tags=["SEO"])
+app.include_router(seo.router, prefix="/seo", tags=["SEO"])
 app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
 
 

@@ -26,10 +26,15 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 // Assuming you implement this function in src/api.ts
 import { askAiForReport } from "../api";
+import { analyzeURL } from "../api";
 
 // -------------------- Types --------------------
 type ScanPoint = { ts: string; score: number };
-type Recommendation = { title: string; detail: string };
+type Recommendation = { 
+  title: string; 
+  detail: string; 
+  relatedIssueId?: string; 
+};
 type Issue = {
   id: string;
   label: string;
@@ -90,57 +95,81 @@ const toCSV = (rows: Record<string, any>[]) => {
 };
 
 // -------------------- Mock analyzer (placeholder) --------------------
-async function fakeAnalyze(_url: string) {
-  // FIX: Prefixed unused 'url'
+// Helper for safety
+const safeNum = (n: any, d = 0) => (Number.isFinite(Number(n)) ? Number(n) : d);
+
+async function realAnalyze(url: string) {
   try {
-    await new Promise((r) => setTimeout(r, 450 + Math.random() * 400));
-    const score = Math.round(30 + Math.random() * 65);
-    const scan = { ts: new Date().toISOString(), score };
-    const recs: Recommendation[] = [
-      {
-        title: "Optimize meta description",
-        detail: "Add 150–160 char meta description with clear CTA.",
-      },
-      {
-        title: "Compress hero image",
-        detail: "Deliver WebP and lazy-load offscreen images.",
-      },
-      {
-        title: "Add H1 and structured headings",
-        detail: "Single H1, logical H2/H3 hierarchy.",
-      },
-    ];
-    const issues: Issue[] = [
-      {
-        id: "meta",
-        label: "Meta description missing",
-        severity: 70,
-        category: "On-page",
-        fixed: false,
-      },
-      {
-        id: "images_alt",
-        label: "Images missing alt text",
-        severity: 45,
-        category: "Accessibility",
-        fixed: false,
-      },
-      {
-        id: "broken",
-        label: "Broken links detected",
-        severity: 60,
-        category: "Technical",
-        fixed: false,
-      },
-    ];
-    return { score, scan, recs, issues };
+    // 1. FETCH DATA FROM BACKEND
+    const data = await analyzeURL(url);
+
+    // 2. EXTRACT VARIABLES
+    const title = data.title?.trim();
+    const meta = data.metaTags?.description?.trim();
+    const h1Count = safeNum(data.headingStructure?.h1, 0);
+    const broken = Array.isArray(data.links?.broken) ? data.links.broken : [];
+    const internal = Array.isArray(data.links?.internal) ? data.links.internal : [];
+    const imagesMissingAlt = Array.isArray(data.imagesMissingAlt) ? data.imagesMissingAlt : [];
+    const wordCount = safeNum(data.wordCount, 0);
+    const lcp = safeNum(data.performance?.lcp ?? data.loadingTime, 0);
+
+    // 3. CALCULATE SCORES (Math from seoAnalyzer.tsx)
+    const titleScore = title ? clamp((title.length / 60) * 100, 40, 100) : 10;
+    const metaLen = meta ? meta.length : 0;
+    const metaScore = meta ? clamp(((150 - Math.abs(150 - metaLen)) / 150) * 100, 30, 100) : 15;
+    const h1Score = h1Count === 1 ? 100 : h1Count === 0 ? 25 : 50;
+    const linksScore = clamp(100 - broken.length * 10 + Math.min(internal.length, 10) * 3, 10, 100);
+    const altScore = imagesMissingAlt.length === 0 ? 100 : clamp(100 - imagesMissingAlt.length * 4, 10, 95);
+    const contentScore = wordCount >= 1200 ? 100 : wordCount >= 600 ? 85 : wordCount >= 300 ? 65 : 35;
+    const perfScore = lcp ? (lcp < 2500 ? 95 : lcp < 4000 ? 70 : lcp < 6000 ? 45 : 25) : 60;
+
+    // Average the scores
+    const factors = [titleScore, metaScore, h1Score, linksScore, altScore, contentScore, perfScore];
+    const finalScore = Math.round(factors.reduce((a, b) => a + b, 0) / factors.length);
+
+    // 4. GENERATE ISSUES
+    const issues: Issue[] = [];
+    
+    if (titleScore < 70) issues.push({ id: "title", label: "Title tag needs optimization", severity: 100 - Math.round(titleScore), category: "On-page", fixed: false });
+    if (metaScore < 70) issues.push({ id: "meta", label: "Meta description needs work", severity: 100 - Math.round(metaScore), category: "On-page", fixed: false });
+    if (h1Count !== 1) issues.push({ id: "h1", label: h1Count === 0 ? "Missing H1" : "Multiple H1s found", severity: 50, category: "Structure", fixed: false });
+    if (broken.length > 0) issues.push({ id: "broken", label: `${broken.length} Broken Links`, severity: 80, category: "Technical", fixed: false });
+    if (imagesMissingAlt.length > 0) issues.push({ id: "alt", label: `${imagesMissingAlt.length} Images missing Alt text`, severity: 45, category: "Accessibility", fixed: false });
+    if (wordCount < 300) issues.push({ id: "content", label: "Thin Content", severity: 60, category: "Content", fixed: false });
+
+    // 5. GENERATE RECOMMENDATIONS
+    const recs: Recommendation[] = [];
+    
+    if (!title || title.length < 40) recs.push({ title: "Fix Title Tag", detail: "Add a descriptive title tag between 50-60 characters.", relatedIssueId: "title" });
+    if (!meta) recs.push({ title: "Add Meta Description", detail: "Your page is missing a meta description. Add one to improve CTR.", relatedIssueId: "meta" });
+    if (h1Count === 0) recs.push({ title: "Add H1 Heading", detail: "Ensure your page has one main H1 heading describing the topic.", relatedIssueId: "h1" });
+    if (broken.length > 0) recs.push({ title: "Fix Broken Links", detail: `We found ${broken.length} broken external links. Remove or update them.`, relatedIssueId: "broken" });
+    if (imagesMissingAlt.length > 0) {
+      recs.push({
+        title: "Add Image Alt Text",
+        detail: "Search engines cannot see images. Add descriptive alt text.",
+        relatedIssueId: "alt" // ✨ Link to "alt" issue
+      });
+    }
+    
+    // Fallback rec
+    if (recs.length === 0) recs.push({ title: "Build Backlinks", detail: "Your on-page SEO is good. Focus on getting quality backlinks." });
+
+    return { 
+        score: finalScore, 
+        scan: { ts: new Date().toISOString(), score: finalScore }, 
+        recs, 
+        issues 
+    };
+
   } catch (err) {
-    // fallback
+    console.error("Analyze Error:", err);
+    // Return fallback data so dashboard doesn't crash
     return {
-      score: 50,
-      scan: { ts: new Date().toISOString(), score: 50 },
-      recs: [],
-      issues: [],
+      score: 0,
+      scan: { ts: new Date().toISOString(), score: 0 },
+      recs: [{ title: "Error", detail: "Could not analyze site. Ensure backend is running." }],
+      issues: []
     };
   }
 }
@@ -946,20 +975,34 @@ function ExpandedSitePanel({
           <div style={panel}>
             <div style={{ fontWeight: 900 }}>Content Recommendations</div>
             <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-              {(site.recommendations ?? []).map((r, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
-                  }}
-                >
-                  <div style={{ fontWeight: 800 }}>{r.title}</div>
-                  <div style={{ opacity: 0.9 }}>{r.detail}</div>
-                </div>
-              ))}
+              {(site.recommendations ?? [])
+                .filter((r) => {
+                  // 1. If it's not linked to any issue, show it by default
+                  if (!r.relatedIssueId) return true;
+
+                  // 2. Find the matching issue in the site's issue list
+                  const issue = site.issues?.find((i) => i.id === r.relatedIssueId);
+
+                  // 3. If the issue exists and is marked 'fixed', HIDE this recommendation
+                  if (issue && issue.fixed) return false;
+
+                  // Otherwise, show it
+                  return true;
+                })
+                .map((r, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <div style={{ fontWeight: 800 }}>{r.title}</div>
+                    <div style={{ opacity: 0.9 }}>{r.detail}</div>
+                  </div>
+                ))}
               {!site.recommendations?.length && (
                 <div style={{ opacity: 0.8 }}>No recommendations found.</div>
               )}
@@ -1400,7 +1443,7 @@ export const DashboardDeep = () => {
             setSelectedSiteId(newSite.id);
             setLoadingId(newSite.id);
             try {
-              const res = await fakeAnalyze(url);
+              const res = await realAnalyze(url);
               setState((prev) => ({
                 sites: prev.sites.map((s) =>
                   s.id === newSite.id
@@ -1425,7 +1468,7 @@ export const DashboardDeep = () => {
             // rescan existing
             setLoadingId(existing.id);
             try {
-              const res = await fakeAnalyze(url);
+              const res = await realAnalyze(url);
               setState((prev) => ({
                 sites: prev.sites.map((s) =>
                   s.id === existing.id
@@ -1479,7 +1522,7 @@ export const DashboardDeep = () => {
       notify("Site added — initializing scan");
       setLoadingId(s.id);
       try {
-        const res = await fakeAnalyze(url);
+        const res = await realAnalyze(url);
         setState((prev) => ({
           sites: prev.sites.map((site) =>
             site.id === s.id
@@ -1529,7 +1572,7 @@ export const DashboardDeep = () => {
   const triggerRescan = async (site: Site) => {
     try {
       setLoadingId(site.id);
-      const res = await fakeAnalyze(site.url);
+      const res = await realAnalyze(site.url);
       setState((prev) => ({
         sites: prev.sites.map((s) =>
           s.id === site.id
@@ -1780,7 +1823,7 @@ export const DashboardDeep = () => {
           // run rescan but avoid overlapping by quick mark
           setLoadingId(s.id);
           try {
-            const res = await fakeAnalyze(s.url);
+            const res = await realAnalyze(s.url);
             setState((prev) => ({
               sites: prev.sites.map((si) =>
                 si.id === s.id
