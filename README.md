@@ -206,9 +206,3 @@ The client component, built with React and TypeScript, provides the user interfa
     # This command starts the frontend application, typically accessible at http://localhost:5173
     ```
 
----
-
-<p align="center">Made with ❤️ by the @github.com/diyasikka222</p>
-<p align="center">
-  <a href="#">⬆️ Back to Top</a>
-</p>
